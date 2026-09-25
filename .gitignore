@@ -35,3 +35,6 @@ next-env.d.ts
 
 # Paralucent (licenciada) — manter cópia local ou PARALUCENT_FONTS_DIR no deploy
 /public/fonts/paralucent/*.otf
+
+# Local Netlify folder
+.netlify
