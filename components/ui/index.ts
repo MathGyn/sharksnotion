@@ -1,0 +1,7 @@
+export { AvatarIniciais } from './avatar-iniciais'
+export { Bloco } from './bloco'
+export { Botao } from './botao'
+export { Container, GridRelatorio } from './container'
+export { Pilula } from './pilula'
+export { SeparadorVertical } from './separador-vertical'
+export { Numero, RotuloIndicador, Texto } from './texto'

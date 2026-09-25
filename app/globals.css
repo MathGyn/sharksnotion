@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --marinho: #10203f;
+  --marinho-fumo: #3a4d70;
+  --areia: #b8a27a;
+  --areia-clara: #ede5d6;
+  --papel: #efede7;
+  --branco: #ffffff;
+  --nevoa: #dce0e8;
+  --linha: #e3e0d8;
+  --atraso: #a8402f;
+  --no-prazo: #2f6b4f;
+
+  --pessoa-1: #10203f;
+  --pessoa-2: #b8a27a;
+  --pessoa-3: #6d7f9e;
+  --pessoa-4: #8c7651;
+  --pessoa-5: #3a4d70;
+  --pessoa-6: #a8a29a;
+
+  /* Archivo: eixo wdth (100 = normal, 125 = expandido) */
+  --archivo-wdth-normal: 100;
+  --archivo-wdth-expanded: 125;
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-papel font-sans text-16 text-marinho leading-texto;
+    font-variation-settings: 'wdth' var(--archivo-wdth-normal);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .font-archivo-normal {
+    font-variation-settings: 'wdth' var(--archivo-wdth-normal);
+  }
+
+  .font-archivo-expanded {
+    font-variation-settings: 'wdth' var(--archivo-wdth-expanded);
+    @apply font-semibold tracking-titulo;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+}
