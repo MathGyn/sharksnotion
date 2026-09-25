@@ -4,9 +4,9 @@ import { derivarPessoasDosPara } from './classificacao'
 import { resolverPeriodoConsulta, type PeriodoResolvido } from './periodo'
 
 export function chaveRelatorioValida(chave: string): boolean {
-  const esperada = process.env.REPORT_ACCESS_KEY
+  const esperada = process.env.REPORT_ACCESS_KEY?.trim()
   if (!esperada) return false
-  return chave === esperada
+  return chave.trim() === esperada
 }
 
 export async function carregarContextoRelatorio(
