@@ -11,35 +11,68 @@ function normalizarNome(nome: string): string {
   return nome.trim().toLocaleLowerCase('pt-BR')
 }
 
-function primeiroNome(nome: string): string {
-  return nome.trim().split(/\s+/)[0] ?? nome
+function partesNome(nome: string): string[] {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((parte) => normalizarNome(parte))
 }
 
-/** Associa nomes da esteira a perfis do workspace (nome exato ou primeiro nome). */
+/** 0 = nome completo, 1 = sobrenome, 2 = primeiro nome. */
+function rankCorrespondencia(nomeEsteira: string, perfil: PerfilNotion): number | null {
+  const chave = normalizarNome(nomeEsteira)
+  if (!chave) return null
+
+  const partes = partesNome(perfil.nome)
+  if (partes.length === 0) return null
+  if (partes.join(' ') === chave) return 0
+  if (partes.slice(1).includes(chave)) return 1
+  if (partes[0] === chave) return 2
+  return null
+}
+
+/**
+ * Associa nomes da esteira a perfis do workspace.
+ * Sobrenome ganha do primeiro nome, e cada perfil entra em um card só —
+ * assim "Perdigão" fica com Guilherme Perdigão e "Guilherme" com o outro Guilherme.
+ */
 export function mapaAvatarPorNome(
   perfis: PerfilNotion[],
   nomesEsteira: string[]
 ): Record<string, string | null> {
   const mapa: Record<string, string | null> = {}
+  const usados = new Set<string>()
+  const pares: { nome: string; perfil: PerfilNotion; rank: number }[] = []
 
   for (const nome of nomesEsteira) {
-    mapa[nome] = resolverAvatarUrl(nome, perfis)
+    for (const perfil of perfis) {
+      const rank = rankCorrespondencia(nome, perfil)
+      if (rank === null) continue
+      pares.push({ nome, perfil, rank })
+    }
+  }
+
+  pares.sort(
+    (a, b) =>
+      a.rank - b.rank || a.perfil.nome.localeCompare(b.perfil.nome, 'pt-BR')
+  )
+
+  for (const par of pares) {
+    if (par.nome in mapa || usados.has(par.perfil.id)) continue
+    mapa[par.nome] = par.perfil.avatarUrl
+    usados.add(par.perfil.id)
+  }
+
+  for (const nome of nomesEsteira) {
+    if (!(nome in mapa)) mapa[nome] = null
   }
 
   return mapa
 }
 
 export function resolverAvatarUrl(nome: string, perfis: PerfilNotion[]): string | null {
-  const chave = normalizarNome(nome)
-  if (!chave) return null
-
-  const exato = perfis.find((p) => normalizarNome(p.nome) === chave)
-  if (exato?.avatarUrl) return exato.avatarUrl
-
-  const porPrimeiro = perfis.find(
-    (p) => normalizarNome(primeiroNome(p.nome)) === chave
-  )
-  return porPrimeiro?.avatarUrl ?? null
+  return mapaAvatarPorNome(perfis, [nome])[nome] ?? null
 }
 
 async function fetchPerfisNotion(): Promise<PerfilNotion[]> {
