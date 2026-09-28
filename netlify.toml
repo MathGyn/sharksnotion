@@ -10,3 +10,7 @@
 # PDF + Notion podem levar alguns segundos na primeira carga
 [functions]
   node_bundler = "esbuild"
+
+# Dia 1 de cada mês, 11:00 UTC — relatório do mês anterior
+[functions."relatorio-mensal"]
+  schedule = "0 11 1 * *"

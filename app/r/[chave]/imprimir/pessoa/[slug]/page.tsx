@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 import { Container, GridRelatorio } from '@/components/ui/container'
 import { Texto } from '@/components/ui/texto'
 import { CabecalhoRelatorio } from '@/components/relatorio/cabecalho-relatorio'

@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { Client } from '@notionhq/client'
+import { criarClienteNotion } from './client'
 
 export interface PerfilNotion {
   id: string
@@ -45,7 +45,7 @@ export function resolverAvatarUrl(nome: string, perfis: PerfilNotion[]): string 
 async function fetchPerfisNotion(): Promise<PerfilNotion[]> {
   if (!process.env.NOTION_TOKEN) return []
 
-  const client = new Client({ auth: process.env.NOTION_TOKEN })
+  const client = criarClienteNotion()
   const perfis: PerfilNotion[] = []
   let cursor: string | undefined
 
@@ -78,7 +78,7 @@ async function fetchPerfisNotion(): Promise<PerfilNotion[]> {
 }
 
 const perfisCached = unstable_cache(fetchPerfisNotion, ['notion-workspace-users'], {
-  revalidate: 3600,
+  revalidate: 60,
   tags: ['notion', 'notion-users'],
 })
 

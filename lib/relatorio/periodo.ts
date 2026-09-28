@@ -215,3 +215,20 @@ export function intervaloFixo(de: DataISO, ate: DataISO): PeriodoResolvido {
   const intervalo = clampIntervaloSemFuturo({ de, ate }, new Date('2026-12-31'))
   return { intervalo, preset: 'personalizado', rotulo: formatarRotuloPeriodo(intervalo) }
 }
+
+/** Mês civil anterior completo (timezone São Paulo), para envio no dia 1. */
+export function intervaloMesAnteriorFechado(referencia: Date = new Date()): Intervalo {
+  return presetMesPassado(referencia)
+}
+
+export function mesAnoDeIntervalo(intervalo: Intervalo): string {
+  return intervalo.de.slice(0, 7)
+}
+
+export function rotuloMesAnoPorExtenso(mesAno: string): string {
+  const [anoStr, mesStr] = mesAno.split('-')
+  const mes = parseInt(mesStr, 10)
+  const ano = parseInt(anoStr, 10)
+  if (mes < 1 || mes > 12 || Number.isNaN(ano)) return mesAno
+  return `${MESES_PT[mes - 1]} de ${ano}`
+}

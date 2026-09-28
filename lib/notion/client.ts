@@ -55,14 +55,22 @@ async function fetchAllFromNotion(client: Client, dataSourceId: string): Promise
   return pages
 }
 
-function notionClient(): Client {
+/** fetch sem o cache padrão do Next (GET ficaria preso para sempre). O TTL de 60s fica em fetch.ts. */
+export function criarClienteNotion(): Client {
   const token = process.env.NOTION_TOKEN?.trim()
   if (!token) {
     throw new NotionDataSourceError(
       'NOTION_TOKEN não está definido, mas a aplicação tentou buscar dados reais.'
     )
   }
-  return new Client({ auth: token })
+  return new Client({
+    auth: token,
+    fetch: (url, init) => fetch(url, { ...init, cache: 'no-store' }),
+  })
+}
+
+function notionClient(): Client {
+  return criarClienteNotion()
 }
 
 type ResultadoFonte = { pages: NotionPage[]; aviso: string | null }

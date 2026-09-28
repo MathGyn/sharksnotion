@@ -11,6 +11,7 @@ import {
   calcularTodasPassagens,
   mediaHorasPassagensPessoa,
   passagemTerminouNoIntervalo,
+  passagensFechadas,
 } from './passagens'
 import { derivarPessoasDosPara } from './classificacao'
 import type { Intervalo } from '@/lib/utils/date'
@@ -50,6 +51,27 @@ export function mediaTempoComPessoaEmDias(
   const passagens = calcularTodasPassagens(movimentacoes, pessoas)
   const mediaHoras = mediaHorasPassagensPessoa(passagens, nomePessoa)
   if (mediaHoras === null) return null
+  return horasParaDiasUmaCasa(mediaHoras)
+}
+
+/** Tempo médio (dias) que a pessoa ficou com a demanda, passagens encerradas no intervalo. */
+export function mediaTempoPessoaNoIntervaloEmDias(
+  movimentacoes: Movimentacao[],
+  nomePessoa: string,
+  intervalo: Intervalo
+): number | null {
+  const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
+  const passagens = calcularTodasPassagens(movimentacoes, pessoas)
+  const alvo = nomePessoa.toLocaleLowerCase('pt-BR')
+  const noIntervalo = passagensFechadas(passagens).filter(
+    (p) =>
+      p.pessoa !== null &&
+      p.pessoa.toLocaleLowerCase('pt-BR') === alvo &&
+      passagemTerminouNoIntervalo(p, intervalo)
+  )
+  if (noIntervalo.length === 0) return null
+  const mediaHoras =
+    noIntervalo.reduce((acc, p) => acc + (p.duracaoHoras ?? 0), 0) / noIntervalo.length
   return horasParaDiasUmaCasa(mediaHoras)
 }
 

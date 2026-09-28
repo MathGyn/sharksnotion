@@ -1,4 +1,6 @@
 import { Container, GridRelatorio } from '@/components/ui/container'
+
+export const dynamic = 'force-dynamic'
 import { Texto } from '@/components/ui/texto'
 import { CabecalhoRelatorio } from '@/components/relatorio/cabecalho-relatorio'
 import { GradeCardsPessoa } from '@/components/relatorio/grade-cards-pessoa'

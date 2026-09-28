@@ -1,4 +1,6 @@
 import { Suspense } from 'react'
+
+export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { Texto } from '@/components/ui/texto'

@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { chaveRelatorioValida } from '@/lib/relatorio/contexto-relatorio'
 
+export const dynamic = 'force-dynamic'
+
 type LayoutProps = {
   children: React.ReactNode
   params: { chave: string }
