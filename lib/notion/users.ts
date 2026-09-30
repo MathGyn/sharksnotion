@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { criarClienteNotion } from './client'
+import { extrairMensagemNotionApi } from './errors'
 
 export interface PerfilNotion {
   id: string
@@ -78,34 +79,27 @@ export function resolverAvatarUrl(nome: string, perfis: PerfilNotion[]): string 
 async function fetchPerfisNotion(): Promise<PerfilNotion[]> {
   if (!process.env.NOTION_TOKEN) return []
 
-  const client = criarClienteNotion()
+  // Curto de propósito: avatar não pode segurar o relatório até o timeout de 60s.
+  const client = criarClienteNotion({ timeoutMs: 8_000 })
   const perfis: PerfilNotion[] = []
   let cursor: string | undefined
 
-  try {
-    do {
-      const response = await client.users.list({ start_cursor: cursor, page_size: 100 })
+  do {
+    const response = await client.users.list({ start_cursor: cursor, page_size: 100 })
 
-      for (const user of response.results) {
-        if (user.type !== 'person') continue
-        const nome = user.name?.trim()
-        if (!nome) continue
-        perfis.push({
-          id: user.id,
-          nome,
-          avatarUrl: user.avatar_url ?? null,
-        })
-      }
-
-      cursor = response.next_cursor ?? undefined
-    } while (cursor)
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[dev] Não foi possível listar usuários do Notion para avatares.', error)
-      return []
+    for (const user of response.results) {
+      if (user.type !== 'person') continue
+      const nome = user.name?.trim()
+      if (!nome) continue
+      perfis.push({
+        id: user.id,
+        nome,
+        avatarUrl: user.avatar_url ?? null,
+      })
     }
-    throw error
-  }
+
+    cursor = response.next_cursor ?? undefined
+  } while (cursor)
 
   return perfis
 }
@@ -116,7 +110,16 @@ const perfisCached = unstable_cache(fetchPerfisNotion, ['notion-workspace-users'
 })
 
 export async function fetchPerfisWorkspace(): Promise<PerfilNotion[]> {
-  return perfisCached()
+  try {
+    return await perfisCached()
+  } catch (error) {
+    // Não cacheia lista vazia: o throw acima deixa a última lista boa no unstable_cache.
+    console.warn(
+      '[notion] avatares indisponíveis:',
+      extrairMensagemNotionApi(error) || 'falha ao listar usuários'
+    )
+    return []
+  }
 }
 
 export async function fetchAvatarsPorNome(

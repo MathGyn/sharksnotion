@@ -44,7 +44,7 @@ function demanda(partial: Partial<Demanda> & Pick<Demanda, 'id'>): Demanda {
 const setembro = intervaloFixo('2026-09-01', '2026-09-30')
 
 describe('agregacoes', () => {
-  it('contagem por departamento usa Sem vínculo sem solicitação', () => {
+  it('contagem por departamento usa Marketing sem solicitação', () => {
     const demandas = [
       demanda({ id: 'd1', solicitacaoDeOrigemId: 's1' }),
       demanda({ id: 'd2', solicitacaoDeOrigemId: null }),

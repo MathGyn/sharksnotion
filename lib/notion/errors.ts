@@ -8,13 +8,9 @@ export class NotionDataSourceError extends Error {
   }
 }
 
-export function extrairMensagemNotionApi(error: unknown): string {
-  if (!error || typeof error !== 'object') return ''
-
+function textoDireto(error: object): string {
   const e = error as { message?: string; body?: string; code?: string }
-  if (typeof e.message === 'string' && e.message.trim()) {
-    return e.message.trim()
-  }
+  if (typeof e.message === 'string' && e.message.trim()) return e.message.trim()
   if (typeof e.body === 'string') {
     try {
       const parsed = JSON.parse(e.body) as { message?: string }
@@ -24,8 +20,19 @@ export function extrairMensagemNotionApi(error: unknown): string {
     }
   }
   if (typeof e.code === 'string') return e.code
-
   return ''
+}
+
+export function extrairMensagemNotionApi(error: unknown): string {
+  if (!error || typeof error !== 'object') return ''
+
+  const base = textoDireto(error)
+  const causa = (error as { cause?: unknown }).cause
+  if (!causa || causa === error || typeof causa !== 'object') return base
+
+  const extra = textoDireto(causa)
+  if (!extra || extra === base) return base
+  return base ? `${base} (${extra})` : extra
 }
 
 export function mensagemErroNotionParaUsuario(error: unknown): string {

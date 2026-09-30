@@ -30,10 +30,6 @@ async function fetchAllFromNotion(client: Client, dataSourceId: string): Promise
   let cursor: string | undefined
 
   do {
-    if (cursor) {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-    }
-
     try {
       const response = (await client.dataSources.query({
         data_source_id: dataSourceId,
@@ -58,7 +54,7 @@ async function fetchAllFromNotion(client: Client, dataSourceId: string): Promise
 }
 
 /** fetch sem o cache padrão do Next (GET ficaria preso para sempre). O TTL de 60s fica em fetch.ts. */
-export function criarClienteNotion(): Client {
+export function criarClienteNotion(opcoes?: { timeoutMs?: number }): Client {
   const token = process.env.NOTION_TOKEN?.trim()
   if (!token) {
     throw new NotionDataSourceError(
@@ -67,6 +63,7 @@ export function criarClienteNotion(): Client {
   }
   return new Client({
     auth: token,
+    timeoutMs: opcoes?.timeoutMs,
     fetch: (url, init) => fetch(url, { ...init, cache: 'no-store' }),
   })
 }

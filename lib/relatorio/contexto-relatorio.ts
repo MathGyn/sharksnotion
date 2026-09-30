@@ -1,5 +1,5 @@
 import { fetchAllDataSources } from '@/lib/notion/fetch'
-import { fetchAvatarsPorNome } from '@/lib/notion/users'
+import { fetchPerfisWorkspace, mapaAvatarPorNome } from '@/lib/notion/users'
 import { derivarPessoasDosPara } from './classificacao'
 import type { ExclusaoDemandaRelatorio } from './exclusoes-demanda'
 import { listarExclusoesDemandaMockLocal } from './exclusoes-demanda-store'
@@ -28,6 +28,8 @@ export async function carregarContextoRelatorio(
   contagensEntregas: ContagemEntregasMensal[]
   observacoesPessoa: ObservacaoPessoaMensal[]
 }> {
+  // Avatares em paralelo com as bases — um users.list lento não soma no tempo do relatório.
+  const perfisPromise = fetchPerfisWorkspace()
   const {
     demandas,
     solicitacoes,
@@ -37,9 +39,10 @@ export async function carregarContextoRelatorio(
     contagensEntregas,
     observacoesPessoa,
   } = await fetchAllDataSources()
-  const [extrasMock, registrosMock] = await Promise.all([
+  const [extrasMock, registrosMock, perfis] = await Promise.all([
     listarExclusoesDemandaMockLocal(),
     listarRegistrosPessoaMockLocal(),
+    perfisPromise,
   ])
   const exclusoesDemanda = mergeExclusoesDemanda(doNotion, extrasMock)
   const periodo = resolverPeriodoConsulta(
@@ -52,7 +55,7 @@ export async function carregarContextoRelatorio(
     movimentacoes
   )
   const pessoasReferencia = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
-  const avatarsPorNome = await fetchAvatarsPorNome(pessoasReferencia)
+  const avatarsPorNome = mapaAvatarPorNome(perfis, pessoasReferencia)
 
   return {
     demandas,
