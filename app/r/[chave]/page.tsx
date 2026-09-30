@@ -26,7 +26,8 @@ export default async function RelatorioTimePage({ params, searchParams }: PagePr
     ctx.demandas,
     ctx.solicitacoes,
     ctx.movimentacoes,
-    ctx.periodo
+    ctx.periodo,
+    ctx.exclusoesDemanda
   )
   const intervalo = ctx.periodo.intervalo
 

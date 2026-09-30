@@ -47,7 +47,8 @@ export async function gerarPdfRelatorioMensal(
     ctx.demandas,
     ctx.solicitacoes,
     ctx.movimentacoes,
-    periodo
+    periodo,
+    ctx.exclusoesDemanda
   )
 
   const buffer = await renderToBuffer(

@@ -51,7 +51,8 @@ export async function gerarPdfRelatorioTime(
     ctx.demandas,
     ctx.solicitacoes,
     ctx.movimentacoes,
-    ctx.periodo
+    ctx.periodo,
+    ctx.exclusoesDemanda
   )
 
   const buffer = await renderToBuffer(
@@ -82,7 +83,8 @@ export async function gerarPdfRelatorioPessoa(
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,
     intervalo,
-    ctx.demandas
+    ctx.demandas,
+    ctx.exclusoesDemanda
   ).map((l) => l.nome)
   const nomePessoa = resolverPessoaPorSlug(slug, nomesNoPeriodo)
   if (!nomePessoa) return null
@@ -92,10 +94,11 @@ export async function gerarPdfRelatorioPessoa(
     ctx.solicitacoes,
     ctx.movimentacoes,
     ctx.periodo,
-    nomePessoa
+    nomePessoa,
+    ctx.exclusoesDemanda
   )
 
-  const filtros = filtrosBaseVisaoPessoa(intervalo, nomePessoa)
+  const filtros = filtrosBaseVisaoPessoa(intervalo, nomePessoa, ctx.exclusoesDemanda)
   const lista = listarDemandasFiltradas(
     ctx.demandas,
     ctx.solicitacoes,

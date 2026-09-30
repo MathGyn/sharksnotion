@@ -28,7 +28,15 @@ export async function GET(request: Request, { params }: RouteContext) {
   const aberto = sp.aberto
   const demandaId = sp.demanda
 
-  const ctx = await carregarContextoRelatorioCached(sp)
+  let ctx
+  try {
+    ctx = await carregarContextoRelatorioCached(sp)
+  } catch (error) {
+    console.error('[drill] Falha ao carregar contexto:', error)
+    const msg =
+      error instanceof Error ? error.message : 'Erro ao carregar dados do relatório'
+    return Response.json({ erro: msg }, { status: 500 })
+  }
   const intervalo = ctx.periodo.intervalo
 
   let filtrosBase = filtrosBaseVisaoTime(intervalo)
@@ -37,13 +45,14 @@ export async function GET(request: Request, { params }: RouteContext) {
     const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
       ctx.movimentacoes,
       intervalo,
-      ctx.demandas
+      ctx.demandas,
+      ctx.exclusoesDemanda
     ).map((l) => l.nome)
     const nomePessoa = resolverPessoaPorSlug(slugPessoa, nomesNoPeriodo)
     if (!nomePessoa) {
       return Response.json({ erro: 'Pessoa não encontrada' }, { status: 404 })
     }
-    filtrosBase = filtrosBaseVisaoPessoa(intervalo, nomePessoa)
+    filtrosBase = filtrosBaseVisaoPessoa(intervalo, nomePessoa, ctx.exclusoesDemanda)
   }
 
   if (tipo === 'lista') {

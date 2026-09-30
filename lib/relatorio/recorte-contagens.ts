@@ -22,26 +22,34 @@ export function idsDemandasContagemVisaoTime(
 export function idsDemandasRecortePassagemPessoa(
   movimentacoes: Movimentacao[],
   nomePessoa: string,
-  intervalo: Intervalo
+  intervalo: Intervalo,
+  demandaIdsExcluir?: ReadonlySet<string>
 ): string[] {
-  return idsDemandasMetricasPessoa(movimentacoes, nomePessoa, intervalo)
+  return idsDemandasMetricasPessoa(movimentacoes, nomePessoa, intervalo, demandaIdsExcluir)
 }
 
 export function idsDemandasContagemVisaoPessoa(
   demandas: Demanda[],
   movimentacoes: Movimentacao[],
   nomePessoa: string,
-  intervalo: Intervalo
+  intervalo: Intervalo,
+  demandaIdsExcluir?: ReadonlySet<string>
 ): string[] {
   void demandas
-  return idsDemandasRecortePassagemPessoa(movimentacoes, nomePessoa, intervalo)
+  return idsDemandasRecortePassagemPessoa(
+    movimentacoes,
+    nomePessoa,
+    intervalo,
+    demandaIdsExcluir
+  )
 }
 
 /** Passagens encerradas no intervalo — recorte único da visão pessoa. */
 export function idsDemandasMetricasPessoa(
   movimentacoes: Movimentacao[],
   nomePessoa: string,
-  intervalo: Intervalo
+  intervalo: Intervalo,
+  demandaIdsExcluir?: ReadonlySet<string>
 ): string[] {
   const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
   const passagens = calcularTodasPassagens(movimentacoes, pessoas)
@@ -51,7 +59,8 @@ export function idsDemandasMetricasPessoa(
     if (
       p.pessoa !== null &&
       p.pessoa.localeCompare(nomePessoa, 'pt-BR', { sensitivity: 'base' }) === 0 &&
-      passagemTerminouNoIntervalo(p, intervalo)
+      passagemTerminouNoIntervalo(p, intervalo) &&
+      !demandaIdsExcluir?.has(p.demandaId)
     ) {
       ids.add(p.demandaId)
     }

@@ -8,11 +8,8 @@ import {
 import { shouldUseNotionMocks } from './data-source'
 import { NotionDataSourceError, extrairMensagemNotionApi } from './errors'
 import type { NotionPage } from './types'
-import {
-  normalizeDemanda,
-  normalizeMovimentacao,
-  normalizeSolicitacao,
-} from './normalize'
+import { partitionMovimentacoesPages } from './movimentacoes-parse'
+import { normalizeDemanda, normalizeSolicitacao } from './normalize'
 import type { NotionDataSources, NotionRawBundle } from './types'
 
 /** Payload bruto do Notion passa de 2MB — unstable_cache do Next não aceita o bundle. */
@@ -46,12 +43,15 @@ async function geracaoCacheNotion(): Promise<number> {
 }
 
 function normalizeBundle(raw: NotionRawBundle): NotionDataSources {
+  const { movimentacoes, exclusoesDemanda } = partitionMovimentacoesPages(
+    raw.movimentacoesPages
+  )
+
   return {
     demandas: raw.demandasPages.map(normalizeDemanda),
     solicitacoes: raw.solicitacoesPages.map(normalizeSolicitacao),
-    movimentacoes: raw.movimentacoesPages
-      .map(normalizeMovimentacao)
-      .filter((m) => m.demandaId !== null),
+    movimentacoes,
+    exclusoesDemanda,
     avisosNotion: raw.avisos ?? [],
   }
 }
@@ -99,6 +99,29 @@ async function buscarFonteLiveComFallback(
   }
 }
 
+function erroLimiteDataCacheNext(error: unknown): boolean {
+  return (
+    error instanceof Error && /items over 2MB can not be cached/i.test(error.message)
+  )
+}
+
+/** unstable_cache falha quando a fonte passa de 2MB — busca direta + cache só em memória. */
+async function executarFonteNotionCacheada(
+  rotulo: string,
+  cachedFn: () => Promise<FonteNotionCacheada>,
+  buscarDireto: () => Promise<NotionPage[]>
+): Promise<FonteNotionCacheada> {
+  try {
+    return await cachedFn()
+  } catch (error) {
+    if (!erroLimiteDataCacheNext(error)) throw error
+    console.warn(
+      `[notion] ${rotulo}: resposta > 2MB — data cache do Next ignorado; usando busca direta.`
+    )
+    return buscarFonteLiveComFallback(rotulo, buscarDireto)
+  }
+}
+
 /** Cache compartilhado entre instâncias (cada base separada — cabe no limite do Next). */
 const cachedLiveDemandas = unstable_cache(
   () => buscarFonteLiveComFallback('Esteira (demandas)', fetchRawDemandasPages),
@@ -120,9 +143,21 @@ const cachedLiveMovimentacoes = unstable_cache(
 
 async function fetchRawAllPagesViaDataCache(): Promise<NotionRawBundle> {
   const [dem, sol, mov] = await Promise.all([
-    cachedLiveDemandas(),
-    cachedLiveSolicitacoes(),
-    cachedLiveMovimentacoes(),
+    executarFonteNotionCacheada(
+      'Esteira (demandas)',
+      cachedLiveDemandas,
+      fetchRawDemandasPages
+    ),
+    executarFonteNotionCacheada(
+      'Solicitações',
+      cachedLiveSolicitacoes,
+      fetchRawSolicitacoesPages
+    ),
+    executarFonteNotionCacheada(
+      'Movimentações',
+      cachedLiveMovimentacoes,
+      fetchRawMovimentacoesPages
+    ),
   ])
 
   const avisos = [dem.aviso, sol.aviso, mov.aviso].filter((a): a is string => Boolean(a))

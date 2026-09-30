@@ -11,6 +11,8 @@ const DATA_SOURCE_IDS = {
   movimentacoes: '0b2bfe8c-0dad-4345-897f-74c9657d9594',
 } as const
 
+export const NOTION_DATA_SOURCE_MOVIMENTACOES = DATA_SOURCE_IDS.movimentacoes
+
 const ROTULOS_FONTES = {
   esteira: 'Esteira (demandas)',
   solicitacoes: 'Solicitações',

@@ -5,34 +5,28 @@ import {
   type FiltrosDemandaResolvidos,
   listarDemandasFiltradas,
 } from './filtros-demandas'
-import { montarDetalheDemanda, type HistoricoMovimentacaoItem } from './detalhe-demanda'
+import { montarDetalheDemanda } from './detalhe-demanda'
+import type { DetalheDemandaInline } from './drill-down-types'
+export type { DetalheDemandaInline }
+import {
+  chaveAbertoDepartamento,
+  chaveAbertoTipo,
+} from './drill-down-chaves'
+export { chaveAbertoDepartamento, chaveAbertoTipo }
+import {
+  demandaIdsExcluirParaPessoa,
+  type ExclusaoDemandaRelatorio,
+} from './exclusoes-demanda'
 import {
   listarDepartamentosConhecidos,
   listarTiposConhecidos,
   resolverDepartamentoPorSlug,
   resolverTipoPorSlug,
-  departamentoParaSlug,
-  tipoConteudoParaSlug,
 } from './slugs-filtro'
-
-export interface DetalheDemandaInline {
-  id: string
-  historicoVazioPorAntiguidade: boolean
-  historico: HistoricoMovimentacaoItem[]
-  notionUrl: string
-}
 
 export interface PayloadDrillDown {
   listasPorAberto: Record<string, DemandaListagemItem[]>
   detalhesPorId: Record<string, DetalheDemandaInline>
-}
-
-export function chaveAbertoDepartamento(nomeDepartamento: string): string {
-  return `departamento:${departamentoParaSlug(nomeDepartamento)}`
-}
-
-export function chaveAbertoTipo(nomeTipo: string): string {
-  return `tipo:${tipoConteudoParaSlug(nomeTipo)}`
 }
 
 export function montarDetalheDemandaInline(
@@ -151,12 +145,16 @@ export function filtrosBaseVisaoTime(
 
 export function filtrosBaseVisaoPessoa(
   intervalo: FiltrosDemandaResolvidos['intervalo'],
-  nomePessoa: string
+  nomePessoa: string,
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
 ): FiltrosDemandaResolvidos {
+  const demandaIdsExcluir = demandaIdsExcluirParaPessoa(exclusoesDemanda, nomePessoa)
   return {
     intervalo,
     pessoaNome: nomePessoa,
     departamento: null,
     tipoConteudo: null,
+    demandaIdsExcluir:
+      demandaIdsExcluir.size > 0 ? demandaIdsExcluir : undefined,
   }
 }

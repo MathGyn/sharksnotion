@@ -8,8 +8,8 @@ import type { DemandaListagemItem } from '@/lib/relatorio/filtros-demandas'
 import {
   chaveAbertoDepartamento,
   chaveAbertoTipo,
-  type DetalheDemandaInline,
-} from '@/lib/relatorio/drill-down'
+} from '@/lib/relatorio/drill-down-chaves'
+import type { DetalheDemandaInline } from '@/lib/relatorio/drill-down-types'
 import {
   partesMetadadosDemandaListagem,
   rotuloDataListaDemanda,
@@ -21,6 +21,8 @@ import { HistoricoDemanda } from './historico-demanda'
 type ListasContagemExpansivelProps = {
   chaveRelatorio: string
   slugPessoa?: string
+  /** Nome canônico — necessário para excluir demanda só deste relatório pessoal. */
+  nomePessoa?: string
   paraQuem: ItemContagem[]
   tipoMaterial: ItemContagem[]
   mostrarParaQuem?: boolean
@@ -71,6 +73,9 @@ function ListaCategoria({
   carregandoDemanda,
   onToggleCategoria,
   onToggleDemanda,
+  podeExcluirDemanda,
+  excluindoDemandaId,
+  onExcluirDemanda,
 }: {
   titulo: string
   itens: ItemContagem[]
@@ -83,6 +88,9 @@ function ListaCategoria({
   carregandoDemanda: string | null
   onToggleCategoria: (chave: string) => void
   onToggleDemanda: (id: string) => void
+  podeExcluirDemanda: boolean
+  excluindoDemandaId: string | null
+  onExcluirDemanda: (demandaId: string, chaveLista: string, tituloDemanda: string) => void
 }) {
   return (
     <div>
@@ -134,26 +142,39 @@ function ListaCategoria({
 
                     return (
                       <li key={row.id} className="border-b border-linha last:border-b-0">
-                        <button
-                          type="button"
-                          onClick={() => onToggleDemanda(row.id)}
-                          className="w-full py-16 text-left transition-colors duration-120 hover:text-marinho-fumo"
-                        >
-                          <div className="flex flex-wrap items-baseline justify-between gap-12">
-                            <span className="text-16 font-medium text-marinho">{row.titulo}</span>
-                            <span
-                              className={cn(
-                                'shrink-0 text-14 tabular-nums',
-                                row.situacao === 'no prazo' && 'text-no-prazo',
-                                row.situacao === 'atraso' && 'text-atraso',
-                                row.situacao === 'sem prazo' && 'text-marinho-fumo'
-                              )}
+                        <div className="flex gap-12 py-16">
+                          <button
+                            type="button"
+                            onClick={() => onToggleDemanda(row.id)}
+                            className="min-w-0 flex-1 text-left transition-colors duration-120 hover:text-marinho-fumo"
+                          >
+                            <div className="flex flex-wrap items-baseline justify-between gap-12">
+                              <span className="text-16 font-medium text-marinho">{row.titulo}</span>
+                              <span
+                                className={cn(
+                                  'shrink-0 text-14 tabular-nums',
+                                  row.situacao === 'no prazo' && 'text-no-prazo',
+                                  row.situacao === 'atraso' && 'text-atraso',
+                                  row.situacao === 'sem prazo' && 'text-marinho-fumo'
+                                )}
+                              >
+                                {rotuloDataListaDemanda(row)}
+                              </span>
+                            </div>
+                            <MetadadosLinhaDemanda row={row} />
+                          </button>
+                          {podeExcluirDemanda && (
+                            <button
+                              type="button"
+                              disabled={excluindoDemandaId === row.id}
+                              onClick={() => onExcluirDemanda(row.id, chave, row.titulo)}
+                              className="shrink-0 self-start text-14 text-marinho-fumo underline-offset-2 hover:text-atraso hover:underline disabled:opacity-50"
+                              title="Remove esta demanda das suas métricas e listas (não altera o Notion)"
                             >
-                              {rotuloDataListaDemanda(row)}
-                            </span>
-                          </div>
-                          <MetadadosLinhaDemanda row={row} />
-                        </button>
+                              {excluindoDemandaId === row.id ? 'Excluindo…' : 'Excluir'}
+                            </button>
+                          )}
+                        </div>
 
                         {painelExpansivel(
                           detalheAberto,
@@ -224,6 +245,7 @@ function EsqueletoListasContagem() {
 function ListasContagemExpansivelInner({
   chaveRelatorio,
   slugPessoa,
+  nomePessoa,
   paraQuem,
   tipoMaterial,
   mostrarParaQuem = true,
@@ -240,8 +262,11 @@ function ListasContagemExpansivelInner({
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DetalheDemandaInline>>({})
   const [carregandoLista, setCarregandoLista] = useState<string | null>(null)
   const [carregandoDemanda, setCarregandoDemanda] = useState<string | null>(null)
+  const [excluindoDemandaId, setExcluindoDemandaId] = useState<string | null>(null)
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null)
   const listasJaCarregadas = useRef(new Set<string>())
   const detalhesJaCarregados = useRef(new Set<string>())
+  const podeExcluirDemanda = Boolean(nomePessoa)
 
   const chavePeriodo = `${searchParams.get('de') ?? ''}|${searchParams.get('ate') ?? ''}|${searchParams.get('mes') ?? ''}`
 
@@ -337,6 +362,50 @@ function ListasContagemExpansivelInner({
     }
   }
 
+  const onExcluirDemanda = async (
+    demandaId: string,
+    chaveLista: string,
+    tituloDemanda: string
+  ) => {
+    if (!nomePessoa) return
+    const confirmou = window.confirm(
+      'Excluir esta demanda do seu relatório? Passagens, entregas e percentual no prazo serão recalculados. Será criado um registro em Movimentações (exclusão do relatório).'
+    )
+    if (!confirmou) return
+
+    setErroExclusao(null)
+    setExcluindoDemandaId(demandaId)
+    try {
+      const res = await fetch(`/r/${chaveRelatorio}/excluir-demanda`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao: 'excluir',
+          demandaId,
+          pessoaNome: nomePessoa,
+          tituloDemanda,
+        }),
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { erro?: string }
+        setErroExclusao(data.erro ?? 'Não foi possível excluir.')
+        return
+      }
+
+      setListasPorAberto((prev) => {
+        const rows = prev[chaveLista]
+        if (!rows) return prev
+        return { ...prev, [chaveLista]: rows.filter((r) => r.id !== demandaId) }
+      })
+      if (demandaAberta === demandaId) {
+        pushParams({ demanda: null })
+      }
+      router.refresh()
+    } finally {
+      setExcluindoDemandaId(null)
+    }
+  }
+
   return (
     <div
       className={
@@ -345,6 +414,11 @@ function ListasContagemExpansivelInner({
           : 'grid grid-cols-12 gap-24 md:max-w-[50%]'
       }
     >
+      {erroExclusao && (
+        <p className="col-span-12 text-14 text-atraso" role="alert">
+          {erroExclusao}
+        </p>
+      )}
       {mostrarParaQuem && (
         <div className="col-span-12 md:col-span-6">
           <ListaCategoria
@@ -359,6 +433,9 @@ function ListasContagemExpansivelInner({
             carregandoDemanda={carregandoDemanda}
             onToggleCategoria={onToggleCategoria}
             onToggleDemanda={onToggleDemanda}
+            podeExcluirDemanda={podeExcluirDemanda}
+            excluindoDemandaId={excluindoDemandaId}
+            onExcluirDemanda={(id, chave, titulo) => void onExcluirDemanda(id, chave, titulo)}
           />
         </div>
       )}
@@ -375,6 +452,9 @@ function ListasContagemExpansivelInner({
           carregandoDemanda={carregandoDemanda}
           onToggleCategoria={onToggleCategoria}
           onToggleDemanda={onToggleDemanda}
+          podeExcluirDemanda={podeExcluirDemanda}
+          excluindoDemandaId={excluindoDemandaId}
+          onExcluirDemanda={(id, chave, titulo) => void onExcluirDemanda(id, chave, titulo)}
         />
       </div>
     </div>

@@ -78,7 +78,8 @@ export function mediaTempoPessoaNoIntervaloEmDias(
 export function entregasPessoaNoIntervalo(
   movimentacoes: Movimentacao[],
   nomePessoa: string,
-  intervalo: Intervalo
+  intervalo: Intervalo,
+  demandaIdsExcluir?: ReadonlySet<string>
 ): number {
   const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
   const passagens = calcularTodasPassagens(movimentacoes, pessoas)
@@ -87,7 +88,8 @@ export function entregasPessoaNoIntervalo(
     (p) =>
       p.pessoa !== null &&
       p.pessoa.toLocaleLowerCase('pt-BR') === nomePessoa.toLocaleLowerCase('pt-BR') &&
-      passagemTerminouNoIntervalo(p, intervalo)
+      passagemTerminouNoIntervalo(p, intervalo) &&
+      !demandaIdsExcluir?.has(p.demandaId)
   ).length
 }
 

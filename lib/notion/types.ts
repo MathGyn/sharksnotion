@@ -1,3 +1,5 @@
+import type { ExclusaoDemandaRelatorio } from '@/lib/relatorio/exclusoes-demanda'
+
 /** Data sem hora — sempre AAAA-MM-DD */
 export type DataISO = string
 
@@ -65,6 +67,7 @@ export interface NotionDataSources {
   demandas: Demanda[]
   solicitacoes: Solicitacao[]
   movimentacoes: Movimentacao[]
+  exclusoesDemanda: ExclusaoDemandaRelatorio[]
   avisosNotion: string[]
 }
 

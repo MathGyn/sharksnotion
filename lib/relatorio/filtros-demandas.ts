@@ -25,6 +25,8 @@ export interface FiltrosDemandaResolvidos {
   pessoaNome: string | null
   departamento: string | null
   tipoConteudo: string | null
+  /** Demandas omitidas do relatório desta pessoa (erro de roteamento). */
+  demandaIdsExcluir?: ReadonlySet<string>
 }
 
 export type ChipFiltro =
@@ -159,7 +161,8 @@ function demandasBaseDoRecorte(
       idsDemandasRecortePassagemPessoa(
         movimentacoes,
         filtros.pessoaNome,
-        filtros.intervalo
+        filtros.intervalo,
+        filtros.demandaIdsExcluir
       )
     )
     return demandas.filter((d) => ids.has(d.id))

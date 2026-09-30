@@ -31,6 +31,10 @@ import {
   idsDemandasMetricasPessoa,
   idsDemandasRecortePassagemPessoa,
 } from './recorte-contagens'
+import {
+  demandaIdsExcluirParaPessoa,
+  type ExclusaoDemandaRelatorio,
+} from './exclusoes-demanda'
 import { entregasPessoaNoIntervalo, leadTimeEmDias } from './tempo'
 
 export { SEM_VINCULO, SEM_TIPO }
@@ -182,16 +186,23 @@ export function contagemPorTipoMaterial(
 export function entregasPorPessoaNoIntervalo(
   movimentacoes: Movimentacao[],
   intervalo: Intervalo,
-  demandas: Demanda[]
+  demandas: Demanda[],
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
 ): Omit<CardPessoaAgregado, 'destaque' | 'slug'>[] {
   const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
 
   return pessoas
     .map((nome) => {
-      const ids = idsDemandasRecortePassagemPessoa(movimentacoes, nome, intervalo)
+      const excluir = demandaIdsExcluirParaPessoa(exclusoesDemanda, nome)
+      const ids = idsDemandasRecortePassagemPessoa(
+        movimentacoes,
+        nome,
+        intervalo,
+        excluir
+      )
       return {
         nome,
-        passagens: entregasPessoaNoIntervalo(movimentacoes, nome, intervalo),
+        passagens: entregasPessoaNoIntervalo(movimentacoes, nome, intervalo, excluir),
         demandas: ids.length,
         emAbertoAgora: contarEmAbertoComPessoa(demandas, nome),
         percentualNoPrazo: percentualNoPrazoRecorte(
@@ -210,12 +221,14 @@ export function metricasPessoaNoIntervalo(
   demandas: Demanda[],
   movimentacoes: Movimentacao[],
   nomePessoa: string,
-  intervalo: Intervalo
+  intervalo: Intervalo,
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
 ): IndicadoresPessoa {
-  const ids = idsDemandasMetricasPessoa(movimentacoes, nomePessoa, intervalo)
+  const excluir = demandaIdsExcluirParaPessoa(exclusoesDemanda, nomePessoa)
+  const ids = idsDemandasMetricasPessoa(movimentacoes, nomePessoa, intervalo, excluir)
 
   return {
-    passagens: entregasPessoaNoIntervalo(movimentacoes, nomePessoa, intervalo),
+    passagens: entregasPessoaNoIntervalo(movimentacoes, nomePessoa, intervalo, excluir),
     demandas: ids.length,
     percentualNoPrazo: percentualNoPrazoRecorte(
       demandas,
@@ -336,12 +349,18 @@ export function montarRelatorioVisaoTime(
   demandas: Demanda[],
   solicitacoes: Solicitacao[],
   movimentacoes: Movimentacao[],
-  periodo: PeriodoResolvido
+  periodo: PeriodoResolvido,
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
 ): RelatorioVisaoTime {
   const intervalo = periodo.intervalo
   const concluidasIds = idsDemandasRecorteTime(demandas, movimentacoes, intervalo)
 
-  const cardsRaw = entregasPorPessoaNoIntervalo(movimentacoes, intervalo, demandas)
+  const cardsRaw = entregasPorPessoaNoIntervalo(
+    movimentacoes,
+    intervalo,
+    demandas,
+    exclusoesDemanda
+  )
   const cardsPessoa: CardPessoaAgregado[] = marcarDestaqueCardPrincipal(
     cardsRaw.map((l) => ({
       ...l,
@@ -379,10 +398,17 @@ export function montarRelatorioVisaoPessoa(
   solicitacoes: Solicitacao[],
   movimentacoes: Movimentacao[],
   periodo: PeriodoResolvido,
-  nomePessoa: string
+  nomePessoa: string,
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
 ): RelatorioVisaoPessoa {
   const intervalo = periodo.intervalo
-  const ids = idsDemandasRecortePassagemPessoa(movimentacoes, nomePessoa, intervalo)
+  const excluir = demandaIdsExcluirParaPessoa(exclusoesDemanda, nomePessoa)
+  const ids = idsDemandasRecortePassagemPessoa(
+    movimentacoes,
+    nomePessoa,
+    intervalo,
+    excluir
+  )
 
   return {
     periodo,
@@ -392,7 +418,8 @@ export function montarRelatorioVisaoPessoa(
       demandas,
       movimentacoes,
       nomePessoa,
-      intervalo
+      intervalo,
+      exclusoesDemanda
     ),
     paraQuem: contagemPorDepartamento(demandas, solicitacoes, ids),
     tipoMaterial: contagemPorTipoMaterial(demandas, ids),

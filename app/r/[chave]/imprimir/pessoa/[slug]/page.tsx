@@ -28,7 +28,8 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,
     intervalo,
-    ctx.demandas
+    ctx.demandas,
+    ctx.exclusoesDemanda
   ).map((l) => l.nome)
   const nomePessoa = resolverPessoaPorSlug(params.slug, nomesNoPeriodo)
 
@@ -41,7 +42,8 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
     ctx.solicitacoes,
     ctx.movimentacoes,
     ctx.periodo,
-    nomePessoa
+    nomePessoa,
+    ctx.exclusoesDemanda
   )
   return (
     <Container className="print:max-w-none">

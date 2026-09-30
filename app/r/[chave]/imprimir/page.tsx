@@ -24,7 +24,8 @@ export default async function ImprimirTimePage({ params, searchParams }: PagePro
     ctx.demandas,
     ctx.solicitacoes,
     ctx.movimentacoes,
-    ctx.periodo
+    ctx.periodo,
+    ctx.exclusoesDemanda
   )
   const intervalo = ctx.periodo.intervalo
 

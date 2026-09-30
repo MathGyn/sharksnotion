@@ -1,6 +1,9 @@
 import { fetchAllDataSources } from '@/lib/notion/fetch'
 import { fetchAvatarsPorNome } from '@/lib/notion/users'
 import { derivarPessoasDosPara } from './classificacao'
+import type { ExclusaoDemandaRelatorio } from './exclusoes-demanda'
+import { listarExclusoesDemandaMockLocal } from './exclusoes-demanda-store'
+import { mergeExclusoesDemanda } from './merge-exclusoes'
 import { resolverPeriodoConsulta, type PeriodoResolvido } from './periodo'
 
 export function chaveRelatorioValida(chave: string): boolean {
@@ -19,9 +22,12 @@ export async function carregarContextoRelatorio(
   pessoasReferencia: string[]
   avatarsPorNome: Record<string, string | null>
   avisosNotion: string[]
+  exclusoesDemanda: ExclusaoDemandaRelatorio[]
 }> {
-  const { demandas, solicitacoes, movimentacoes, avisosNotion } =
+  const { demandas, solicitacoes, movimentacoes, avisosNotion, exclusoesDemanda: doNotion } =
     await fetchAllDataSources()
+  const extrasMock = await listarExclusoesDemandaMockLocal()
+  const exclusoesDemanda = mergeExclusoesDemanda(doNotion, extrasMock)
   const periodo = resolverPeriodoConsulta(
     {
       de: searchParams.de,
@@ -42,5 +48,6 @@ export async function carregarContextoRelatorio(
     pessoasReferencia,
     avatarsPorNome,
     avisosNotion,
+    exclusoesDemanda,
   }
 }

@@ -6,6 +6,11 @@ import { AvisosNotion } from '@/components/relatorio/avisos-notion'
 import { CabecalhoRelatorio } from '@/components/relatorio/cabecalho-relatorio'
 import { IndicadoresLinha } from '@/components/relatorio/indicadores-linha'
 import { ListasContagemExpansivel } from '@/components/relatorio/listas-contagem-expansivel'
+import { PainelExclusoesDemanda } from '@/components/relatorio/painel-exclusoes-demanda'
+import {
+  demandaIdsExcluirParaPessoa,
+  pessoasIguais,
+} from '@/lib/relatorio/exclusoes-demanda'
 import { NavegacaoPessoas } from '@/components/relatorio/navegacao-pessoas'
 import {
   entregasPorPessoaNoIntervalo,
@@ -30,7 +35,8 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,
     intervalo,
-    ctx.demandas
+    ctx.demandas,
+    ctx.exclusoesDemanda
   ).map((l) => l.nome)
   const nomePessoa = resolverPessoaPorSlug(params.slug, nomesNoPeriodo)
 
@@ -43,13 +49,27 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
     ctx.solicitacoes,
     ctx.movimentacoes,
     ctx.periodo,
-    nomePessoa
+    nomePessoa,
+    ctx.exclusoesDemanda
   )
 
   const pessoasNav = nomesNoPeriodo.map((nome) => ({
     nome,
     slug: nomeParaSlug(nome),
   }))
+
+  const idsExcluidos = demandaIdsExcluirParaPessoa(ctx.exclusoesDemanda, nomePessoa)
+  const itensExcluidos = ctx.exclusoesDemanda
+    .filter((e) => pessoasIguais(e.pessoaNome, nomePessoa))
+    .map((e) => {
+      const d = ctx.demandas.find((x) => x.id === e.demandaId)
+      return {
+        demandaId: e.demandaId,
+        titulo: d?.solicitacao ?? e.demandaId,
+        registroPageId: e.registroPageId,
+      }
+    })
+    .filter((item) => idsExcluidos.has(item.demandaId))
 
   return (
     <Container>
@@ -84,8 +104,15 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
       <ListasContagemExpansivel
         chaveRelatorio={params.chave}
         slugPessoa={params.slug}
+        nomePessoa={nomePessoa}
         paraQuem={relatorio.paraQuem}
         tipoMaterial={relatorio.tipoMaterial}
+      />
+
+      <PainelExclusoesDemanda
+        chaveRelatorio={params.chave}
+        pessoaNome={nomePessoa}
+        itens={itensExcluidos}
       />
     </Container>
   )
