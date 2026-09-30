@@ -1,25 +1,33 @@
 export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
+import { Bloco } from '@/components/ui/bloco'
 import { Container } from '@/components/ui/container'
 import { Texto } from '@/components/ui/texto'
 import { AvisosNotion } from '@/components/relatorio/avisos-notion'
 import { CabecalhoRelatorio } from '@/components/relatorio/cabecalho-relatorio'
-import { IndicadoresLinha } from '@/components/relatorio/indicadores-linha'
+import { ContadorEntregas } from '@/components/relatorio/contador-entregas'
 import { ListasContagemExpansivel } from '@/components/relatorio/listas-contagem-expansivel'
+import { ObservacoesPessoa } from '@/components/relatorio/observacoes-pessoa'
 import { PainelExclusoesDemanda } from '@/components/relatorio/painel-exclusoes-demanda'
-import {
-  demandaIdsExcluirParaPessoa,
-  pessoasIguais,
-} from '@/lib/relatorio/exclusoes-demanda'
+import { CabecalhoPessoa, ResumoPessoa } from '@/components/relatorio/resumo-pessoa'
+import { demandaIdsExcluirParaPessoa, pessoasIguais } from '@/lib/relatorio/exclusoes-demanda'
 import { NavegacaoPessoas } from '@/components/relatorio/navegacao-pessoas'
 import {
   entregasPorPessoaNoIntervalo,
   montarRelatorioVisaoPessoa,
 } from '@/lib/relatorio/agregacoes'
 import { carregarContextoRelatorioCached } from '@/lib/relatorio/contexto-relatorio-cache'
-import { subtituloVisaoPessoa, tituloPessoaPeriodo } from '@/lib/relatorio/formatadores'
-import { indicadoresPessoaParaUi } from '@/lib/relatorio/indicadores-ui'
+import { contarEmAbertoComPessoa } from '@/lib/relatorio/em-aberto'
+import { subtituloVisaoPessoa } from '@/lib/relatorio/formatadores'
+import { rotuloMesAnoPorExtenso } from '@/lib/relatorio/periodo'
 import { presetsPeriodoParaUi } from '@/lib/relatorio/presets-ui'
+import {
+  contagemEntregasDoMes,
+  mesAnterior,
+  registrosPessoaNoPeriodo,
+} from '@/lib/relatorio/registros-pessoa'
+import { mediaTempoPessoaNoIntervaloEmDias } from '@/lib/relatorio/tempo'
+import { getMesAnoAtualSP } from '@/lib/utils/date'
 import { nomeParaSlug, resolverPessoaPorSlug } from '@/lib/utils/slug'
 import { normalizarSearchParams } from '@/lib/relatorio/url-relatorio'
 
@@ -36,9 +44,12 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
     ctx.movimentacoes,
     intervalo,
     ctx.demandas,
-    ctx.exclusoesDemanda
+    ctx.exclusoesDemanda,
   ).map((l) => l.nome)
-  const nomePessoa = resolverPessoaPorSlug(params.slug, nomesNoPeriodo)
+  // Sem passagem no período a página ainda abre — é onde se lança a contagem do mês novo.
+  const nomePessoa =
+    resolverPessoaPorSlug(params.slug, nomesNoPeriodo) ??
+    resolverPessoaPorSlug(params.slug, ctx.pessoasReferencia)
 
   if (!nomePessoa) {
     notFound()
@@ -50,13 +61,13 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
     ctx.movimentacoes,
     ctx.periodo,
     nomePessoa,
-    ctx.exclusoesDemanda
+    ctx.exclusoesDemanda,
   )
 
-  const pessoasNav = nomesNoPeriodo.map((nome) => ({
-    nome,
-    slug: nomeParaSlug(nome),
-  }))
+  const nomesNav = nomesNoPeriodo.some((n) => pessoasIguais(n, nomePessoa))
+    ? nomesNoPeriodo
+    : [...nomesNoPeriodo, nomePessoa]
+  const pessoasNav = nomesNav.map((nome) => ({ nome, slug: nomeParaSlug(nome) }))
 
   const idsExcluidos = demandaIdsExcluirParaPessoa(ctx.exclusoesDemanda, nomePessoa)
   const itensExcluidos = ctx.exclusoesDemanda
@@ -71,8 +82,17 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
     })
     .filter((item) => idsExcluidos.has(item.demandaId))
 
+  const registros = registrosPessoaNoPeriodo(
+    ctx.contagensEntregas,
+    ctx.observacoesPessoa,
+    nomePessoa,
+    intervalo,
+  )
+  const mesRef = registros.mesReferencia
+  const rotuloMes = mesRef ? rotuloMesAnoPorExtenso(mesRef) : ctx.periodo.rotulo
+
   return (
-    <Container>
+    <Container className="pb-96">
       <CabecalhoRelatorio
         chave={params.chave}
         rotuloPeriodo={ctx.periodo.rotulo}
@@ -90,24 +110,73 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
         pessoas={pessoasNav}
       />
 
-      <Texto as="p" tamanho={16} className="mb-8 text-26 font-semibold leading-titulo tracking-titulo">
-        {tituloPessoaPeriodo(relatorio.nome, relatorio.periodo.rotulo)}
-      </Texto>
-      <Texto as="p" tamanho={14} tom="secundario" className="mb-32">
-        {subtituloVisaoPessoa(relatorio.nome)}
-      </Texto>
-
-      <div className="mb-64">
-        <IndicadoresLinha itens={indicadoresPessoaParaUi(relatorio.indicadores)} />
-      </div>
-
-      <ListasContagemExpansivel
-        chaveRelatorio={params.chave}
-        slugPessoa={params.slug}
-        nomePessoa={nomePessoa}
-        paraQuem={relatorio.paraQuem}
-        tipoMaterial={relatorio.tipoMaterial}
+      <CabecalhoPessoa
+        nome={relatorio.nome}
+        rotuloPeriodo={relatorio.periodo.rotulo}
+        pessoasReferencia={ctx.pessoasReferencia}
+        fotoUrl={ctx.avatarsPorNome[nomePessoa]}
+        emAbertoAgora={contarEmAbertoComPessoa(ctx.demandas, nomePessoa)}
       />
+
+      <section aria-label="Resumo do período" className="mb-24">
+        <ResumoPessoa
+          indicadores={relatorio.indicadores}
+          tempoMedioDias={mediaTempoPessoaNoIntervaloEmDias(
+            ctx.movimentacoes,
+            nomePessoa,
+            intervalo,
+          )}
+          contador={
+            <ContadorEntregas
+              key={`${nomePessoa}-${mesRef ?? intervalo.de}`}
+              chaveRelatorio={params.chave}
+              pessoaNome={nomePessoa}
+              mesAno={mesRef}
+              rotuloMes={rotuloMes}
+              valorInicial={registros.contagemMes?.quantidade ?? 0}
+              registroPageIdInicial={registros.contagemMes?.registroPageId}
+              totalPeriodo={registros.totalEntregas}
+              ehMesAtual={mesRef === getMesAnoAtualSP()}
+              valorMesAnterior={
+                mesRef
+                  ? (contagemEntregasDoMes(ctx.contagensEntregas, nomePessoa, mesAnterior(mesRef))
+                      ?.quantidade ?? null)
+                  : null
+              }
+            />
+          }
+        />
+      </section>
+
+      <section className="mb-24" aria-label="O que foi entregue">
+        <Bloco className="p-32">
+          <Texto tamanho={16} className="font-medium">
+            O que foi entregue
+          </Texto>
+          <Texto tamanho={14} tom="secundario" className="mb-24">
+            {subtituloVisaoPessoa(relatorio.nome)} Clique numa linha para ver as demandas.
+          </Texto>
+          <ListasContagemExpansivel
+            chaveRelatorio={params.chave}
+            slugPessoa={params.slug}
+            nomePessoa={nomePessoa}
+            paraQuem={relatorio.paraQuem}
+            tipoMaterial={relatorio.tipoMaterial}
+            comBarras
+          />
+        </Bloco>
+      </section>
+
+      <section aria-label="Observações do período">
+        <ObservacoesPessoa
+          key={`${nomePessoa}-${intervalo.de}-${intervalo.ate}`}
+          chaveRelatorio={params.chave}
+          pessoaNome={nomePessoa}
+          mesAno={mesRef}
+          rotuloMes={rotuloMes}
+          observacoesIniciais={registros.observacoes}
+        />
+      </section>
 
       <PainelExclusoesDemanda
         chaveRelatorio={params.chave}

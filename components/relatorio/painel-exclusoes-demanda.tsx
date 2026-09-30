@@ -53,37 +53,55 @@ export function PainelExclusoesDemanda({
   }
 
   return (
-    <section className="mt-48 border-t border-linha pt-32" aria-label="Demandas excluídas do relatório">
-      <Texto tamanho={16} className="mb-8 font-medium">
-        Excluídas deste relatório
-      </Texto>
-      <Texto tamanho={14} tom="secundario" className="mb-16">
-        Estas demandas não entram em passagens, entregas nem listas abaixo. A demanda na Esteira
-        continua igual; só há um registro em Movimentações marcado como exclusão.
-      </Texto>
-      {erro && (
-        <p className="mb-12 text-14 text-atraso" role="alert">
-          {erro}
-        </p>
-      )}
-      <ul className="border-t border-linha">
-        {itens.map((item) => (
-          <li
-            key={item.demandaId}
-            className="flex flex-wrap items-center justify-between gap-12 border-b border-linha py-12"
-          >
-            <span className="text-16 text-marinho-fumo">{item.titulo}</span>
-            <button
-              type="button"
-              disabled={processandoId === item.demandaId}
-              onClick={() => void restaurar(item)}
-              className="shrink-0 text-14 text-marinho underline-offset-2 hover:underline disabled:opacity-50"
+    <details
+      className="group mt-24 rounded-interno border border-linha px-16"
+      aria-label="Demandas excluídas do relatório"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-8 py-12 text-14 text-marinho-fumo transition-colors duration-120 hover:text-marinho [&::-webkit-details-marker]:hidden">
+        <svg
+          viewBox="0 0 12 12"
+          width={12}
+          height={12}
+          aria-hidden
+          className="shrink-0 transition-transform duration-120 group-open:rotate-90 motion-reduce:transition-none"
+        >
+          <path d="M4.5 3 7.5 6 4.5 9" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span>
+          {itens.length === 1
+            ? '1 demanda excluída deste relatório'
+            : `${itens.length} demandas excluídas deste relatório`}
+        </span>
+      </summary>
+
+      <div className="border-t border-linha pb-12 pt-8">
+        <Texto tamanho={12} tom="secundario" className="mb-8">
+          Não entram nas métricas nem nas listas. A demanda na Esteira continua igual.
+        </Texto>
+        {erro && (
+          <p className="mb-8 text-12 text-atraso" role="alert">
+            {erro}
+          </p>
+        )}
+        <ul>
+          {itens.map((item) => (
+            <li
+              key={item.registroPageId ?? item.demandaId}
+              className="flex items-center justify-between gap-12 py-4"
             >
-              {processandoId === item.demandaId ? 'Restaurando…' : 'Restaurar'}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
+              <span className="min-w-0 truncate text-14 text-marinho-fumo">{item.titulo}</span>
+              <button
+                type="button"
+                disabled={processandoId === item.demandaId}
+                onClick={() => void restaurar(item)}
+                className="shrink-0 text-12 text-marinho underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {processandoId === item.demandaId ? 'Restaurando…' : 'Restaurar'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
   )
 }

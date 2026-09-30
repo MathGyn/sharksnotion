@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Demanda, Movimentacao } from '@/lib/notion/types'
 import { metricasPessoaNoIntervalo } from '@/lib/relatorio/agregacoes'
-import { demandaIdsExcluirParaPessoa } from '@/lib/relatorio/exclusoes-demanda'
+import {
+  deduplicarExclusoesDemanda,
+  demandaIdsExcluirParaPessoa,
+} from '@/lib/relatorio/exclusoes-demanda'
 import { idsDemandasRecortePassagemPessoa } from '@/lib/relatorio/recorte-contagens'
 import { intervaloFixo } from '@/lib/relatorio/periodo'
 import { instanteEmSaoPaulo } from '@/lib/utils/date'
@@ -35,6 +38,18 @@ function mov(partial: Partial<Movimentacao> & Pick<Movimentacao, 'id'>): Movimen
     ...partial,
   }
 }
+
+describe('deduplicarExclusoesDemanda', () => {
+  it('mantém uma linha por demanda+pessoa e prefere registro com page id', () => {
+    const out = deduplicarExclusoesDemanda([
+      { demandaId: 'd1', pessoaNome: 'Matheus' },
+      { demandaId: 'd1', pessoaNome: 'Matheus', registroPageId: 'page-b' },
+      { demandaId: 'd1', pessoaNome: 'Matheus', registroPageId: 'page-a' },
+    ])
+    expect(out).toHaveLength(1)
+    expect(out[0].registroPageId).toBe('page-b')
+  })
+})
 
 describe('exclusões de demanda no relatório pessoal', () => {
   it('remove demanda das métricas e passagens da pessoa', () => {

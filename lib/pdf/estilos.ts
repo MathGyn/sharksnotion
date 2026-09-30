@@ -171,6 +171,28 @@ function criarEstilosPdf(fontFamily: string) {
     entradasSaldoValor: {
       ...bold,
     },
+    observacao: {
+      paddingVertical: 7,
+      paddingLeft: 10,
+      borderLeftWidth: 2,
+      borderLeftColor: pdfCores.areia,
+      marginBottom: 6,
+    },
+    observacaoMeta: {
+      fontSize: 7.5,
+      color: pdfCores.marinhoFumo,
+      marginBottom: 3,
+    },
+    observacaoTexto: {
+      fontSize: 9,
+      lineHeight: 1.4,
+    },
+    observacaoPessoa: {
+      fontSize: 9.5,
+      marginTop: 8,
+      marginBottom: 4,
+      ...bold,
+    },
   })
 }
 

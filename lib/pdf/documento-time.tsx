@@ -18,6 +18,8 @@ export type DocumentoTimePdfProps = {
   geradoEm: string
   metricas: MetricaPdf[]
   cardsPessoa: CardPessoaAgregado[]
+  /** Contagem manual lançada na página de cada pessoa. */
+  entregasPorPessoa: Record<string, number>
   paraQuem: ItemContagem[]
   tipoMaterial: ItemContagem[]
   blocos: BlocosVisaoTime
@@ -28,6 +30,7 @@ export function DocumentoTimePdf(props: DocumentoTimePdfProps) {
   const s = estilosPdf()
   const linhasPessoas = props.cardsPessoa.map((c) => ({
     nome: c.nome,
+    entregas: props.entregasPorPessoa[c.nome] ?? 0,
     passagens: c.passagens,
     demandas: c.demandas,
     emAberto: c.emAbertoAgora,

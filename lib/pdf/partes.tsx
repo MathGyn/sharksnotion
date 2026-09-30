@@ -1,5 +1,7 @@
 import { Image, Text, View } from '@react-pdf/renderer'
 import type { ItemContagem } from '@/lib/relatorio/agregacoes'
+import type { ObservacaoPessoaMensal } from '@/lib/relatorio/registros-pessoa'
+import { formatarDataHoraBR } from '@/lib/utils/date'
 import { caminhoLogoPdfMarinho } from './logo'
 import { estilosPdf } from './estilos'
 
@@ -70,6 +72,38 @@ export function ListaContagemPdf({ titulo, itens }: { titulo: string; itens: Ite
   )
 }
 
+export type ObservacaoPdf = { id: string; autor: string; data: string; texto: string }
+
+export function observacoesParaPdf(observacoes: ObservacaoPessoaMensal[]): ObservacaoPdf[] {
+  return [...observacoes]
+    .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
+    .map((o) => ({
+      id: o.id,
+      autor: o.autor,
+      data: formatarDataHoraBR(o.criadoEm),
+      texto: o.texto,
+    }))
+}
+
+export function ListaObservacoesPdf({ itens }: { itens: ObservacaoPdf[] }) {
+  const s = estilosPdf()
+  if (itens.length === 0) {
+    return <Text style={s.nota}>Nenhuma observação registrada no período.</Text>
+  }
+  return (
+    <View>
+      {itens.map((o) => (
+        <View key={o.id} style={s.observacao} wrap={false}>
+          <Text style={s.observacaoMeta}>
+            {o.autor || 'Sem autor'} · {o.data}
+          </Text>
+          <Text style={s.observacaoTexto}>{o.texto}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 export function RodapePdf() {
   const s = estilosPdf()
   return (
@@ -84,6 +118,7 @@ export function RodapePdf() {
 
 export type LinhaPessoaPdf = {
   nome: string
+  entregas: number
   passagens: number
   demandas: number
   emAberto: number
@@ -94,6 +129,7 @@ export function TabelaPessoasPdf({ linhas }: { linhas: LinhaPessoaPdf[] }) {
   const s = estilosPdf()
   const cols = [
     { key: 'nome', label: 'Pessoa', flex: 2.2 },
+    { key: 'entregas', label: 'Entregas', flex: 0.9, align: 'right' as const },
     { key: 'passagens', label: 'Passagens', flex: 0.9, align: 'right' as const },
     { key: 'demandas', label: 'Demandas', flex: 0.9, align: 'right' as const },
     { key: 'emAberto', label: 'Em aberto', flex: 0.9, align: 'right' as const },
@@ -115,6 +151,7 @@ export function TabelaPessoasPdf({ linhas }: { linhas: LinhaPessoaPdf[] }) {
           style={[s.tabelaLinha, i % 2 === 1 ? s.tabelaLinhaPar : undefined]}
         >
           <Text style={[s.tabelaCelula, { flex: 2.2 }]}>{linha.nome}</Text>
+          <Text style={[s.tabelaCelula, { flex: 0.9, textAlign: 'right' }]}>{linha.entregas}</Text>
           <Text style={[s.tabelaCelula, { flex: 0.9, textAlign: 'right' }]}>{linha.passagens}</Text>
           <Text style={[s.tabelaCelula, { flex: 0.9, textAlign: 'right' }]}>{linha.demandas}</Text>
           <Text style={[s.tabelaCelula, { flex: 0.9, textAlign: 'right' }]}>{linha.emAberto}</Text>

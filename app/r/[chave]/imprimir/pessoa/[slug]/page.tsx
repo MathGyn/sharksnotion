@@ -12,7 +12,12 @@ import {
 } from '@/lib/relatorio/agregacoes'
 import { carregarContextoRelatorio } from '@/lib/relatorio/contexto-relatorio'
 import { tituloPessoaPeriodo } from '@/lib/relatorio/formatadores'
-import { indicadoresPessoaParaUi } from '@/lib/relatorio/indicadores-ui'
+import {
+  indicadorEntregasManuais,
+  indicadoresPessoaParaUi,
+} from '@/lib/relatorio/indicadores-ui'
+import { registrosPessoaNoPeriodo } from '@/lib/relatorio/registros-pessoa'
+import { formatarDataHoraBR } from '@/lib/utils/date'
 import { resolverPessoaPorSlug } from '@/lib/utils/slug'
 import { normalizarSearchParams } from '@/lib/relatorio/url-relatorio'
 
@@ -31,7 +36,9 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
     ctx.demandas,
     ctx.exclusoesDemanda
   ).map((l) => l.nome)
-  const nomePessoa = resolverPessoaPorSlug(params.slug, nomesNoPeriodo)
+  const nomePessoa =
+    resolverPessoaPorSlug(params.slug, nomesNoPeriodo) ??
+    resolverPessoaPorSlug(params.slug, ctx.pessoasReferencia)
 
   if (!nomePessoa) {
     notFound()
@@ -45,6 +52,14 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
     nomePessoa,
     ctx.exclusoesDemanda
   )
+  const registros = registrosPessoaNoPeriodo(
+    ctx.contagensEntregas,
+    ctx.observacoesPessoa,
+    nomePessoa,
+    intervalo
+  )
+  const observacoes = [...registros.observacoes].reverse()
+
   return (
     <Container className="print:max-w-none">
       <CabecalhoRelatorio
@@ -61,7 +76,12 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
       </Texto>
 
       <div className="mb-64 break-inside-avoid">
-        <IndicadoresLinha itens={indicadoresPessoaParaUi(relatorio.indicadores)} />
+        <IndicadoresLinha
+          itens={[
+            indicadorEntregasManuais(registros.totalEntregas),
+            ...indicadoresPessoaParaUi(relatorio.indicadores),
+          ]}
+        />
       </div>
 
       <GridRelatorio className="mb-48 break-inside-avoid">
@@ -75,6 +95,30 @@ export default async function ImprimirPessoaPage({ params, searchParams }: PageP
           />
         </div>
       </GridRelatorio>
+
+      <section className="mb-48" aria-label="Observações">
+        <Texto tamanho={16} className="mb-16 font-medium">
+          Observações
+        </Texto>
+        {observacoes.length === 0 ? (
+          <Texto tamanho={14} tom="secundario">
+            Nenhuma observação registrada no período.
+          </Texto>
+        ) : (
+          <ol className="space-y-16 border-l border-areia pl-16">
+            {observacoes.map((o) => (
+              <li key={o.id} className="break-inside-avoid">
+                <Texto tamanho={12} tom="secundario">
+                  {o.autor || 'Sem autor'} · {formatarDataHoraBR(o.criadoEm)}
+                </Texto>
+                <Texto tamanho={14} className="whitespace-pre-wrap">
+                  {o.texto}
+                </Texto>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </Container>
   )
 }

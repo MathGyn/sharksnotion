@@ -14,11 +14,14 @@ import {
 } from '@/lib/relatorio/formatadores'
 import { listarDemandasFiltradas } from '@/lib/relatorio/filtros-demandas'
 import {
+  indicadorEntregasManuais,
   indicadoresPessoaParaUi,
   indicadoresTimeParaUi,
 } from '@/lib/relatorio/indicadores-ui'
+import { registrosPessoaNoPeriodo, totalEntregasManuaisNoIntervalo } from '@/lib/relatorio/registros-pessoa'
 import { resolverPessoaPorSlug } from '@/lib/utils/slug'
 import { DocumentoPessoaPdf } from './documento-pessoa'
+import { observacoesParaPdf } from './partes'
 import { DocumentoTimePdf } from './documento-time'
 import { initEstilosPdf } from './estilos'
 import { registrarFontesPdf } from './fontes'
@@ -62,6 +65,12 @@ export async function gerarPdfRelatorioTime(
       geradoEm={geradoEmLabel()}
       metricas={indicadoresTimeParaUi(relatorio.indicadores)}
       cardsPessoa={relatorio.cardsPessoa}
+      entregasPorPessoa={Object.fromEntries(
+        relatorio.cardsPessoa.map((c) => [
+          c.nome,
+          totalEntregasManuaisNoIntervalo(ctx.contagensEntregas, c.nome, ctx.periodo.intervalo),
+        ])
+      )}
       paraQuem={relatorio.paraQuem}
       tipoMaterial={relatorio.tipoMaterial}
       blocos={relatorio.blocos}
@@ -86,8 +95,17 @@ export async function gerarPdfRelatorioPessoa(
     ctx.demandas,
     ctx.exclusoesDemanda
   ).map((l) => l.nome)
-  const nomePessoa = resolverPessoaPorSlug(slug, nomesNoPeriodo)
+  const nomePessoa =
+    resolverPessoaPorSlug(slug, nomesNoPeriodo) ??
+    resolverPessoaPorSlug(slug, ctx.pessoasReferencia)
   if (!nomePessoa) return null
+
+  const registros = registrosPessoaNoPeriodo(
+    ctx.contagensEntregas,
+    ctx.observacoesPessoa,
+    nomePessoa,
+    intervalo
+  )
 
   const relatorio = montarRelatorioVisaoPessoa(
     ctx.demandas,
@@ -112,9 +130,13 @@ export async function gerarPdfRelatorioPessoa(
       nomePessoa={nomePessoa}
       periodoRotulo={relatorio.periodo.rotulo}
       geradoEm={geradoEmLabel()}
-      metricas={indicadoresPessoaParaUi(relatorio.indicadores)}
+      metricas={[
+        indicadorEntregasManuais(registros.totalEntregas),
+        ...indicadoresPessoaParaUi(relatorio.indicadores),
+      ]}
       paraQuem={relatorio.paraQuem}
       tipoMaterial={relatorio.tipoMaterial}
+      observacoes={observacoesParaPdf(registros.observacoes)}
       demandas={lista.map((d) => ({
         id: d.id,
         titulo: d.titulo,

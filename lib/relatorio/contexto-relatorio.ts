@@ -5,6 +5,8 @@ import type { ExclusaoDemandaRelatorio } from './exclusoes-demanda'
 import { listarExclusoesDemandaMockLocal } from './exclusoes-demanda-store'
 import { mergeExclusoesDemanda } from './merge-exclusoes'
 import { resolverPeriodoConsulta, type PeriodoResolvido } from './periodo'
+import type { ContagemEntregasMensal, ObservacaoPessoaMensal } from './registros-pessoa'
+import { listarRegistrosPessoaMockLocal } from './registros-pessoa-store'
 
 export function chaveRelatorioValida(chave: string): boolean {
   const esperada = process.env.REPORT_ACCESS_KEY?.trim()
@@ -23,10 +25,22 @@ export async function carregarContextoRelatorio(
   avatarsPorNome: Record<string, string | null>
   avisosNotion: string[]
   exclusoesDemanda: ExclusaoDemandaRelatorio[]
+  contagensEntregas: ContagemEntregasMensal[]
+  observacoesPessoa: ObservacaoPessoaMensal[]
 }> {
-  const { demandas, solicitacoes, movimentacoes, avisosNotion, exclusoesDemanda: doNotion } =
-    await fetchAllDataSources()
-  const extrasMock = await listarExclusoesDemandaMockLocal()
+  const {
+    demandas,
+    solicitacoes,
+    movimentacoes,
+    avisosNotion,
+    exclusoesDemanda: doNotion,
+    contagensEntregas,
+    observacoesPessoa,
+  } = await fetchAllDataSources()
+  const [extrasMock, registrosMock] = await Promise.all([
+    listarExclusoesDemandaMockLocal(),
+    listarRegistrosPessoaMockLocal(),
+  ])
   const exclusoesDemanda = mergeExclusoesDemanda(doNotion, extrasMock)
   const periodo = resolverPeriodoConsulta(
     {
@@ -49,5 +63,7 @@ export async function carregarContextoRelatorio(
     avatarsPorNome,
     avisosNotion,
     exclusoesDemanda,
+    contagensEntregas: [...contagensEntregas, ...registrosMock.contagens],
+    observacoesPessoa: [...observacoesPessoa, ...registrosMock.observacoes],
   }
 }

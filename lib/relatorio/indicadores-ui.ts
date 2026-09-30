@@ -14,6 +14,11 @@ export function indicadoresTimeParaUi(ind: IndicadoresTime): IndicadorItem[] {
   ]
 }
 
+/** Contagem manual (página da pessoa) — entra primeiro no relatório impresso/PDF. */
+export function indicadorEntregasManuais(total: number): IndicadorItem {
+  return { valor: String(total), rotulo: 'entregas lançadas' }
+}
+
 export function indicadoresPessoaParaUi(ind: IndicadoresPessoa): IndicadorItem[] {
   return [
     { valor: String(ind.passagens), rotulo: 'passagens' },

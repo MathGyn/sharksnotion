@@ -12,6 +12,7 @@ import {
 import {
   DocumentoRelatorioMensal,
   montarLinhasPessoaMensal,
+  montarObservacoesPorPessoaMensal,
 } from './documento-relatorio-mensal'
 import { initEstilosPdf } from './estilos'
 import { registrarFonteArchivoPdf } from './fontes-archivo'
@@ -51,13 +52,25 @@ export async function gerarPdfRelatorioMensal(
     ctx.exclusoesDemanda
   )
 
+  const linhasPessoa = montarLinhasPessoaMensal(
+    relatorio,
+    ctx.movimentacoes,
+    ctx.contagensEntregas,
+    ctx.observacoesPessoa
+  )
+
   const buffer = await renderToBuffer(
     <DocumentoRelatorioMensal
       titulo={tituloEntregasPeriodo(relatorio.periodo.rotulo)}
       periodoRotulo={relatorio.periodo.rotulo}
       geradoEm={geradoEmLabel()}
       metricas={indicadoresTimeParaUi(relatorio.indicadores)}
-      linhasPessoa={montarLinhasPessoaMensal(relatorio, ctx.movimentacoes)}
+      linhasPessoa={linhasPessoa}
+      observacoesPorPessoa={montarObservacoesPorPessoaMensal(
+        linhasPessoa,
+        ctx.observacoesPessoa,
+        relatorio.periodo.intervalo
+      )}
       tipoMaterial={relatorio.tipoMaterial}
       porUrgencia={relatorio.blocos.porUrgencia}
       entradasSaidas={relatorio.blocos.entradasSaidas}

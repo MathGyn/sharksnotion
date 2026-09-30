@@ -1,5 +1,5 @@
 import type { ExclusaoDemandaRelatorio } from './exclusoes-demanda'
-import { pessoasIguais } from './exclusoes-demanda'
+import { deduplicarExclusoesDemanda, pessoasIguais } from './exclusoes-demanda'
 
 /** Une exclusões do Notion com JSON local (mock), sem duplicar par demanda+pessoa. */
 export function mergeExclusoesDemanda(
@@ -13,5 +13,5 @@ export function mergeExclusoesDemanda(
     )
     if (!duplicata) out.push(extra)
   }
-  return out
+  return deduplicarExclusoesDemanda(out)
 }

@@ -8,6 +8,7 @@ import {
 import { shouldUseNotionMocks } from './data-source'
 import { NotionDataSourceError, extrairMensagemNotionApi } from './errors'
 import type { NotionPage } from './types'
+import { deduplicarExclusoesDemanda } from '@/lib/relatorio/exclusoes-demanda'
 import { partitionMovimentacoesPages } from './movimentacoes-parse'
 import { normalizeDemanda, normalizeSolicitacao } from './normalize'
 import type { NotionDataSources, NotionRawBundle } from './types'
@@ -43,15 +44,16 @@ async function geracaoCacheNotion(): Promise<number> {
 }
 
 function normalizeBundle(raw: NotionRawBundle): NotionDataSources {
-  const { movimentacoes, exclusoesDemanda } = partitionMovimentacoesPages(
-    raw.movimentacoesPages
-  )
+  const { movimentacoes, exclusoesDemanda, contagensEntregas, observacoesPessoa } =
+    partitionMovimentacoesPages(raw.movimentacoesPages)
 
   return {
     demandas: raw.demandasPages.map(normalizeDemanda),
     solicitacoes: raw.solicitacoesPages.map(normalizeSolicitacao),
     movimentacoes,
-    exclusoesDemanda,
+    exclusoesDemanda: deduplicarExclusoesDemanda(exclusoesDemanda),
+    contagensEntregas,
+    observacoesPessoa,
     avisosNotion: raw.avisos ?? [],
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@/lib/relatorio/drill-down-chaves'
 import type { DetalheDemandaInline } from '@/lib/relatorio/drill-down-types'
 import {
+  formatarSituacaoLista,
   partesMetadadosDemandaListagem,
   rotuloDataListaDemanda,
 } from '@/lib/relatorio/formatadores'
@@ -26,23 +27,65 @@ type ListasContagemExpansivelProps = {
   paraQuem: ItemContagem[]
   tipoMaterial: ItemContagem[]
   mostrarParaQuem?: boolean
+  /** Barra proporcional ao maior total em cada linha. */
+  comBarras?: boolean
 }
 
-function MetadadosLinhaDemanda({ row }: { row: DemandaListagemItem }) {
-  const metadados = partesMetadadosDemandaListagem(row)
-  if (metadados.length === 0) return null
-
+function Spinner({ rotulo }: { rotulo: string }) {
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 text-14 text-marinho-fumo">
-      {metadados.map((texto, idx) => (
-        <Fragment key={`${row.id}-meta-${idx}`}>
-          {idx > 0 && (
-            <span className="text-linha" aria-hidden>
-              ·
-            </span>
-          )}
-          <span>{texto}</span>
-        </Fragment>
+    <span
+      role="status"
+      aria-label={rotulo}
+      className="inline-block h-[12px] w-[12px] shrink-0 animate-spin self-center rounded-pill border border-marinho-fumo border-t-transparent motion-reduce:animate-none"
+    />
+  )
+}
+
+function Chevron({ aberto }: { aberto: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      width={12}
+      height={12}
+      aria-hidden
+      className={cn(
+        'shrink-0 self-center text-marinho-fumo transition-transform duration-120 motion-reduce:transition-none',
+        aberto && 'rotate-180'
+      )}
+    >
+      <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+const LARGURAS_ESQUELETO = ['78%', '62%', '70%']
+
+function EsqueletoLinhasDemanda() {
+  return (
+    <>
+      {LARGURAS_ESQUELETO.map((largura, i) => (
+        <li key={i} className="flex items-center gap-8 px-8 py-8" aria-hidden>
+          <span className="h-[6px] w-[6px] shrink-0 rounded-pill bg-linha" />
+          <span
+            className="h-[12px] animate-pulse rounded-pill bg-linha motion-reduce:animate-none"
+            style={{ width: largura, animationDelay: `${i * 120}ms` }}
+          />
+          <span className="ml-auto h-[10px] w-[64px] animate-pulse rounded-pill bg-linha motion-reduce:animate-none" />
+        </li>
+      ))}
+    </>
+  )
+}
+
+function EsqueletoHistorico() {
+  return (
+    <div className="space-y-8 py-4" aria-hidden>
+      {['55%', '70%'].map((largura) => (
+        <div
+          key={largura}
+          className="h-[10px] animate-pulse rounded-pill bg-linha motion-reduce:animate-none"
+          style={{ width: largura }}
+        />
       ))}
     </div>
   )
@@ -76,7 +119,11 @@ function ListaCategoria({
   podeExcluirDemanda,
   excluindoDemandaId,
   onExcluirDemanda,
+  comBarras = false,
+  falhasLista,
 }: {
+  comBarras?: boolean
+  falhasLista: Record<string, boolean>
   titulo: string
   itens: ItemContagem[]
   chaveItem: (nome: string) => string
@@ -92,11 +139,18 @@ function ListaCategoria({
   excluindoDemandaId: string | null
   onExcluirDemanda: (demandaId: string, chaveLista: string, tituloDemanda: string) => void
 }) {
+  const maiorTotal = Math.max(1, ...itens.map((i) => i.total))
+
   return (
     <div>
       <Texto tamanho={16} className="mb-16 font-medium">
         {titulo}
       </Texto>
+      {itens.length === 0 && (
+        <p className="border-y border-linha py-16 text-14 text-marinho-fumo">
+          Nada no período.
+        </p>
+      )}
       <ul>
         {itens.map((item) => {
           const chave = chaveItem(item.nome)
@@ -109,66 +163,108 @@ function ListaCategoria({
               <button
                 type="button"
                 onClick={() => onToggleCategoria(chave)}
+                aria-expanded={categoriaAberta}
                 className={cn(
-                  'group flex w-full items-baseline gap-8 py-12 text-left transition-colors duration-120',
+                  'group w-full py-12 text-left transition-colors duration-120',
                   categoriaAberta
                     ? 'font-medium text-marinho'
                     : 'text-marinho-fumo hover:text-marinho'
                 )}
               >
-                <span className="shrink-0 text-14">{item.nome}</span>
-                <span
-                  className={cn(
-                    'min-w-[24px] flex-1 border-b border-dotted border-linha',
-                    !categoriaAberta && 'group-hover:border-marinho-fumo'
-                  )}
-                  aria-hidden
-                />
-                <span className="shrink-0 font-archivo-expanded tabular-nums text-16">
-                  {item.total}
+                <span className="flex w-full items-baseline gap-8">
+                  <span className="shrink-0 text-14">{item.nome}</span>
+                  <span
+                    className={cn(
+                      'min-w-[24px] flex-1',
+                      !comBarras && 'border-b border-dotted border-linha',
+                      !comBarras && !categoriaAberta && 'group-hover:border-marinho-fumo'
+                    )}
+                    aria-hidden
+                  />
+                  {listaCarregando && <Spinner rotulo={`Carregando demandas de ${item.nome}`} />}
+                  <span className="shrink-0 font-archivo-expanded tabular-nums text-16">
+                    {item.total}
+                  </span>
+                  <Chevron aberto={categoriaAberta} />
                 </span>
+                {comBarras && (
+                  <span
+                    className="mt-8 block h-[4px] w-full overflow-hidden rounded-pill bg-linha"
+                    aria-hidden
+                  >
+                    <span
+                      className={cn(
+                        'block h-full rounded-pill transition-colors duration-120',
+                        categoriaAberta ? 'bg-marinho' : 'bg-marinho-fumo group-hover:bg-marinho'
+                      )}
+                      style={{ width: `${(item.total / maiorTotal) * 100}%` }}
+                    />
+                  </span>
+                )}
               </button>
 
               {painelExpansivel(
                 categoriaAberta,
-                <ul className="border-t border-linha pl-24">
-                  {listaCarregando && rows === undefined && (
-                    <li className="py-16 text-14 text-marinho-fumo">Carregando…</li>
+                <ul className="mb-12">
+                  {rows === undefined &&
+                    (falhasLista[chave] && !listaCarregando ? (
+                      <li className="py-8 text-12 text-atraso" role="alert">
+                        Não foi possível carregar. Feche e abra de novo para tentar outra vez.
+                      </li>
+                    ) : (
+                      <EsqueletoLinhasDemanda />
+                    ))}
+                  {rows?.length === 0 && (
+                    <li className="py-8 text-12 text-marinho-fumo">Nenhuma demanda.</li>
                   )}
                   {(rows ?? []).map((row) => {
                     const detalheAberto = demandaAberta === row.id
                     const detalhe = detalhes[row.id]
                     const detalheCarregando = carregandoDemanda === row.id
+                    const metadados = partesMetadadosDemandaListagem(row)
 
                     return (
-                      <li key={row.id} className="border-b border-linha last:border-b-0">
-                        <div className="flex gap-12 py-16">
+                      <li key={row.id} className="group/linha">
+                        <div
+                          className={cn(
+                            'flex items-center gap-8 rounded-interno px-8 transition-colors duration-120',
+                            detalheAberto ? 'bg-papel' : 'hover:bg-papel'
+                          )}
+                        >
                           <button
                             type="button"
                             onClick={() => onToggleDemanda(row.id)}
-                            className="min-w-0 flex-1 text-left transition-colors duration-120 hover:text-marinho-fumo"
+                            aria-expanded={detalheAberto}
+                            className="flex min-w-0 flex-1 items-center gap-8 py-8 text-left"
                           >
-                            <div className="flex flex-wrap items-baseline justify-between gap-12">
-                              <span className="text-16 font-medium text-marinho">{row.titulo}</span>
-                              <span
-                                className={cn(
-                                  'shrink-0 text-14 tabular-nums',
-                                  row.situacao === 'no prazo' && 'text-no-prazo',
-                                  row.situacao === 'atraso' && 'text-atraso',
-                                  row.situacao === 'sem prazo' && 'text-marinho-fumo'
-                                )}
-                              >
-                                {rotuloDataListaDemanda(row)}
-                              </span>
-                            </div>
-                            <MetadadosLinhaDemanda row={row} />
+                            <span
+                              className={cn(
+                                'h-[6px] w-[6px] shrink-0 rounded-pill',
+                                row.situacao === 'no prazo' && 'bg-no-prazo',
+                                row.situacao === 'atraso' && 'bg-atraso',
+                                row.situacao === 'sem prazo' && 'bg-linha'
+                              )}
+                              title={formatarSituacaoLista(row.situacao)}
+                            />
+                            <span className="sr-only">{formatarSituacaoLista(row.situacao)}:</span>
+                            <span className="min-w-0 flex-1 truncate text-14 text-marinho">
+                              {row.titulo}
+                            </span>
+                            <span
+                              className={cn(
+                                'shrink-0 text-12 tabular-nums',
+                                row.situacao === 'atraso' ? 'text-atraso' : 'text-marinho-fumo'
+                              )}
+                            >
+                              {rotuloDataListaDemanda(row)}
+                            </span>
                           </button>
                           {podeExcluirDemanda && (
                             <button
                               type="button"
                               disabled={excluindoDemandaId === row.id}
                               onClick={() => onExcluirDemanda(row.id, chave, row.titulo)}
-                              className="shrink-0 self-start text-14 text-marinho-fumo underline-offset-2 hover:text-atraso hover:underline disabled:opacity-50"
+                              className="shrink-0 text-12 text-marinho-fumo opacity-0 transition-opacity duration-120 hover:text-atraso focus-visible:opacity-100 group-hover/linha:opacity-100 disabled:opacity-50"
                               title="Remove esta demanda das suas métricas e listas (não altera o Notion)"
                             >
                               {excluindoDemandaId === row.id ? 'Excluindo…' : 'Excluir'}
@@ -178,22 +274,29 @@ function ListaCategoria({
 
                         {painelExpansivel(
                           detalheAberto,
-                          <div className="border-t border-linha pl-24 pb-16 pt-12">
-                            {detalheCarregando && !detalhe && (
-                              <p className="text-14 text-marinho-fumo">Carregando histórico…</p>
-                            )}
-                            {detalhe?.notionUrl && (
-                              <Link
-                                href={detalhe.notionUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mb-12 inline-block text-14 text-marinho underline-offset-2 hover:underline"
-                              >
-                                Abrir no Notion
-                              </Link>
-                            )}
+                          <div className="mx-8 mb-8 border-l border-linha pb-4 pl-16 pt-4">
+                            <div className="mb-8 flex flex-wrap items-center gap-x-8 gap-y-4 text-12 text-marinho-fumo">
+                              {metadados.map((texto, idx) => (
+                                <Fragment key={`${row.id}-meta-${idx}`}>
+                                  {idx > 0 && <span aria-hidden>·</span>}
+                                  <span>{texto}</span>
+                                </Fragment>
+                              ))}
+                              {detalhe?.notionUrl && (
+                                <Link
+                                  href={detalhe.notionUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-auto text-marinho underline-offset-2 hover:underline"
+                                >
+                                  Abrir no Notion ↗
+                                </Link>
+                              )}
+                            </div>
+                            {detalheCarregando && !detalhe && <EsqueletoHistorico />}
                             {detalhe && (
                               <HistoricoDemanda
+                                compacto
                                 vazioAntiguidade={detalhe.historicoVazioPorAntiguidade}
                                 itens={detalhe.historico}
                               />
@@ -249,6 +352,7 @@ function ListasContagemExpansivelInner({
   paraQuem,
   tipoMaterial,
   mostrarParaQuem = true,
+  comBarras = false,
 }: ListasContagemExpansivelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -261,6 +365,7 @@ function ListasContagemExpansivelInner({
   >({})
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DetalheDemandaInline>>({})
   const [carregandoLista, setCarregandoLista] = useState<string | null>(null)
+  const [falhasLista, setFalhasLista] = useState<Record<string, boolean>>({})
   const [carregandoDemanda, setCarregandoDemanda] = useState<string | null>(null)
   const [excluindoDemandaId, setExcluindoDemandaId] = useState<string | null>(null)
   const [erroExclusao, setErroExclusao] = useState<string | null>(null)
@@ -300,9 +405,14 @@ function ListasContagemExpansivelInner({
         qs.set('tipo', 'lista')
         qs.set('aberto', chave)
         if (slugPessoa) qs.set('pessoa', slugPessoa)
-        const res = await fetch(`/r/${chaveRelatorio}/drill?${qs.toString()}`)
-        if (!res.ok) return
+        const res = await fetch(`/r/${chaveRelatorio}/drill?${qs.toString()}`).catch(() => null)
+        if (!res?.ok) {
+          listasJaCarregadas.current.delete(chave)
+          setFalhasLista((prev) => ({ ...prev, [chave]: true }))
+          return
+        }
         const data = (await res.json()) as { rows?: DemandaListagemItem[] }
+        setFalhasLista((prev) => ({ ...prev, [chave]: false }))
         setListasPorAberto((prev) => ({ ...prev, [chave]: data.rows ?? [] }))
       } finally {
         setCarregandoLista((atual) => (atual === chave ? null : atual))
@@ -424,6 +534,8 @@ function ListasContagemExpansivelInner({
           <ListaCategoria
             titulo="Para quem"
             itens={paraQuem}
+            comBarras={comBarras}
+            falhasLista={falhasLista}
             chaveItem={chaveAbertoDepartamento}
             abertoAtual={abertoAtual}
             demandaAberta={demandaAberta}
@@ -443,6 +555,8 @@ function ListasContagemExpansivelInner({
         <ListaCategoria
           titulo="Tipo de material"
           itens={tipoMaterial}
+          comBarras={comBarras}
+          falhasLista={falhasLista}
           chaveItem={chaveAbertoTipo}
           abertoAtual={abertoAtual}
           demandaAberta={demandaAberta}

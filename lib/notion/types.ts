@@ -1,4 +1,8 @@
 import type { ExclusaoDemandaRelatorio } from '@/lib/relatorio/exclusoes-demanda'
+import type {
+  ContagemEntregasMensal,
+  ObservacaoPessoaMensal,
+} from '@/lib/relatorio/registros-pessoa'
 
 /** Data sem hora — sempre AAAA-MM-DD */
 export type DataISO = string
@@ -68,6 +72,8 @@ export interface NotionDataSources {
   solicitacoes: Solicitacao[]
   movimentacoes: Movimentacao[]
   exclusoesDemanda: ExclusaoDemandaRelatorio[]
+  contagensEntregas: ContagemEntregasMensal[]
+  observacoesPessoa: ObservacaoPessoaMensal[]
   avisosNotion: string[]
 }
 
@@ -84,6 +90,7 @@ export interface NotionPage {
   object: 'page'
   id: string
   created_time: string
+  last_edited_time?: string
   url: string
   properties: Record<string, unknown>
 }

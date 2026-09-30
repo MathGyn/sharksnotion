@@ -1,10 +1,11 @@
 import { Document, Page, Text, View } from '@react-pdf/renderer'
 import type { ItemContagem } from '@/lib/relatorio/agregacoes'
 import { subtituloVisaoPessoa } from '@/lib/relatorio/formatadores'
-import type { MetricaPdf } from './partes'
+import type { MetricaPdf, ObservacaoPdf } from './partes'
 import {
   CabecalhoPdf,
   ListaContagemPdf,
+  ListaObservacoesPdf,
   MetricasPdf,
   RodapePdf,
   SecaoTitulo,
@@ -22,6 +23,7 @@ export type DocumentoPessoaPdfProps = {
   paraQuem: ItemContagem[]
   tipoMaterial: ItemContagem[]
   demandas: LinhaDemandaPdf[]
+  observacoes: ObservacaoPdf[]
 }
 
 export function DocumentoPessoaPdf(props: DocumentoPessoaPdfProps) {
@@ -41,6 +43,11 @@ export function DocumentoPessoaPdf(props: DocumentoPessoaPdfProps) {
         <View style={s.duasColunas}>
           <ListaContagemPdf titulo="Para quem" itens={props.paraQuem} />
           <ListaContagemPdf titulo="Tipo de material" itens={props.tipoMaterial} />
+        </View>
+
+        <SecaoTitulo>{`Observações (${props.observacoes.length})`}</SecaoTitulo>
+        <View style={{ marginBottom: 18 }}>
+          <ListaObservacoesPdf itens={props.observacoes} />
         </View>
 
         <SecaoTitulo>{`Demandas no recorte (${props.demandas.length})`}</SecaoTitulo>
