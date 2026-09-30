@@ -6,7 +6,14 @@ import {
   listarDemandasFiltradas,
 } from './filtros-demandas'
 import { montarDetalheDemanda, type HistoricoMovimentacaoItem } from './detalhe-demanda'
-import { departamentoParaSlug, tipoConteudoParaSlug } from './slugs-filtro'
+import {
+  listarDepartamentosConhecidos,
+  listarTiposConhecidos,
+  resolverDepartamentoPorSlug,
+  resolverTipoPorSlug,
+  departamentoParaSlug,
+  tipoConteudoParaSlug,
+} from './slugs-filtro'
 
 export interface DetalheDemandaInline {
   id: string
@@ -26,6 +33,57 @@ export function chaveAbertoDepartamento(nomeDepartamento: string): string {
 
 export function chaveAbertoTipo(nomeTipo: string): string {
   return `tipo:${tipoConteudoParaSlug(nomeTipo)}`
+}
+
+export function montarDetalheDemandaInline(
+  demandaId: string,
+  demandas: Demanda[],
+  solicitacoes: Solicitacao[],
+  movimentacoes: Movimentacao[]
+): DetalheDemandaInline | null {
+  const detalhe = montarDetalheDemanda(demandaId, demandas, solicitacoes, movimentacoes)
+  if (!detalhe) return null
+  return {
+    id: detalhe.id,
+    historicoVazioPorAntiguidade: detalhe.historicoVazioPorAntiguidade,
+    historico: detalhe.historico,
+    notionUrl: detalhe.notionUrl,
+  }
+}
+
+export function montarListaPorChaveAberto(
+  aberto: string,
+  demandas: Demanda[],
+  solicitacoes: Solicitacao[],
+  movimentacoes: Movimentacao[],
+  filtrosBase: FiltrosDemandaResolvidos
+): DemandaListagemItem[] | null {
+  if (aberto.startsWith('departamento:')) {
+    const slug = aberto.slice('departamento:'.length)
+    const nome = resolverDepartamentoPorSlug(
+      slug,
+      listarDepartamentosConhecidos(solicitacoes)
+    )
+    if (!nome) return null
+    return listarDemandasFiltradas(demandas, solicitacoes, movimentacoes, {
+      ...filtrosBase,
+      departamento: nome,
+      tipoConteudo: null,
+    })
+  }
+
+  if (aberto.startsWith('tipo:')) {
+    const slug = aberto.slice('tipo:'.length)
+    const nome = resolverTipoPorSlug(slug, listarTiposConhecidos(demandas))
+    if (!nome) return null
+    return listarDemandasFiltradas(demandas, solicitacoes, movimentacoes, {
+      ...filtrosBase,
+      departamento: null,
+      tipoConteudo: nome,
+    })
+  }
+
+  return null
 }
 
 export function montarPayloadDrillDown(
@@ -73,14 +131,8 @@ export function montarPayloadDrillDown(
 
   const detalhesPorId: Record<string, DetalheDemandaInline> = {}
   for (const id of ids) {
-    const detalhe = montarDetalheDemanda(id, demandas, solicitacoes, movimentacoes)
-    if (!detalhe) continue
-    detalhesPorId[id] = {
-      id: detalhe.id,
-      historicoVazioPorAntiguidade: detalhe.historicoVazioPorAntiguidade,
-      historico: detalhe.historico,
-      notionUrl: detalhe.notionUrl,
-    }
+    const inline = montarDetalheDemandaInline(id, demandas, solicitacoes, movimentacoes)
+    if (inline) detalhesPorId[id] = inline
   }
 
   return { listasPorAberto, detalhesPorId }

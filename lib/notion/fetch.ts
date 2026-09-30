@@ -1,6 +1,13 @@
 import { unstable_cache } from 'next/cache'
-import { fetchRawAllPages } from './client'
+import {
+  fetchRawAllPages,
+  fetchRawDemandasPages,
+  fetchRawMovimentacoesPages,
+  fetchRawSolicitacoesPages,
+} from './client'
 import { shouldUseNotionMocks } from './data-source'
+import { NotionDataSourceError, extrairMensagemNotionApi } from './errors'
+import type { NotionPage } from './types'
 import {
   normalizeDemanda,
   normalizeMovimentacao,
@@ -23,7 +30,12 @@ const lerGeracaoCacheNotion = unstable_cache(
   { revalidate: REVALIDATE_NOTION_SEGUNDOS, tags: [TAG_CACHE_NOTION] }
 )
 
-let liveMemoryCache: { fetchedAt: number; geracao: number; raw: NotionRawBundle } | null = null
+let liveMemoryCache: {
+  fetchedAt: number
+  geracao: number
+  raw: NotionRawBundle
+  normalized: NotionDataSources
+} | null = null
 
 async function geracaoCacheNotion(): Promise<number> {
   try {
@@ -56,13 +68,77 @@ async function fetchRawLiveComCacheMemoria(): Promise<NotionRawBundle> {
     return liveMemoryCache.raw
   }
 
-  const raw = await fetchRawAllPages()
+  const raw = await fetchRawAllPagesViaDataCache()
   if (!raw.avisos?.length) {
-    liveMemoryCache = { fetchedAt: now, geracao, raw }
+    liveMemoryCache = {
+      fetchedAt: now,
+      geracao,
+      raw,
+      normalized: normalizeBundle(raw),
+    }
   } else {
     liveMemoryCache = null
   }
   return raw
+}
+
+type FonteNotionCacheada = { pages: NotionPage[]; aviso: string | null }
+
+async function buscarFonteLiveComFallback(
+  rotulo: string,
+  buscar: () => Promise<NotionPage[]>
+): Promise<FonteNotionCacheada> {
+  try {
+    return { pages: await buscar(), aviso: null }
+  } catch (error) {
+    const detalhe = extrairMensagemNotionApi(error)
+    return {
+      pages: [],
+      aviso: detalhe ? `${rotulo}: ${detalhe}` : `${rotulo}: falha ao consultar o Notion.`,
+    }
+  }
+}
+
+/** Cache compartilhado entre instâncias (cada base separada — cabe no limite do Next). */
+const cachedLiveDemandas = unstable_cache(
+  () => buscarFonteLiveComFallback('Esteira (demandas)', fetchRawDemandasPages),
+  ['notion-live', 'demandas'],
+  { revalidate: REVALIDATE_NOTION_SEGUNDOS, tags: [TAG_CACHE_NOTION] }
+)
+
+const cachedLiveSolicitacoes = unstable_cache(
+  () => buscarFonteLiveComFallback('Solicitações', fetchRawSolicitacoesPages),
+  ['notion-live', 'solicitacoes'],
+  { revalidate: REVALIDATE_NOTION_SEGUNDOS, tags: [TAG_CACHE_NOTION] }
+)
+
+const cachedLiveMovimentacoes = unstable_cache(
+  () => buscarFonteLiveComFallback('Movimentações', fetchRawMovimentacoesPages),
+  ['notion-live', 'movimentacoes'],
+  { revalidate: REVALIDATE_NOTION_SEGUNDOS, tags: [TAG_CACHE_NOTION] }
+)
+
+async function fetchRawAllPagesViaDataCache(): Promise<NotionRawBundle> {
+  const [dem, sol, mov] = await Promise.all([
+    cachedLiveDemandas(),
+    cachedLiveSolicitacoes(),
+    cachedLiveMovimentacoes(),
+  ])
+
+  const avisos = [dem.aviso, sol.aviso, mov.aviso].filter((a): a is string => Boolean(a))
+
+  if (!shouldUseNotionMocks() && avisos.length === 3) {
+    throw new NotionDataSourceError(
+      `Nenhuma das três bases respondeu no Notion. Confira NOTION_TOKEN e o compartilhamento com a integração.\n\n${avisos.join('\n\n')}`
+    )
+  }
+
+  return {
+    demandasPages: dem.pages,
+    solicitacoesPages: sol.pages,
+    movimentacoesPages: mov.pages,
+    avisos,
+  }
 }
 
 const fetchRawCachedMock = unstable_cache(
@@ -86,9 +162,33 @@ async function fetchRawParaAmbiente(): Promise<NotionRawBundle> {
   return fetchRawLiveComCacheMemoria()
 }
 
-/** Normaliza após ler do cache de páginas cruas. */
+/** Normaliza após ler do cache de páginas cruas (bundle normalizado fica em memória no live). */
 export async function fetchAllDataSources(): Promise<NotionDataSources> {
-  const raw = await fetchRawParaAmbiente()
+  if (shouldUseNotionMocks()) {
+    const raw = await fetchRawParaAmbiente()
+    return normalizeBundle(raw)
+  }
+
+  const now = Date.now()
+  const geracao = await geracaoCacheNotion()
+  if (
+    liveMemoryCache &&
+    liveMemoryCache.geracao === geracao &&
+    now - liveMemoryCache.fetchedAt < LIVE_TTL_MS &&
+    !liveMemoryCache.raw.avisos?.length
+  ) {
+    return liveMemoryCache.normalized
+  }
+
+  const raw = await fetchRawLiveComCacheMemoria()
+  if (
+    liveMemoryCache &&
+    liveMemoryCache.geracao === geracao &&
+    now - liveMemoryCache.fetchedAt < LIVE_TTL_MS
+  ) {
+    return liveMemoryCache.normalized
+  }
+
   return normalizeBundle(raw)
 }
 

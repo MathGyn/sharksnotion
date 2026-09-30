@@ -1,5 +1,3 @@
-import { Suspense } from 'react'
-
 export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import { Container } from '@/components/ui/container'
@@ -13,11 +11,7 @@ import {
   entregasPorPessoaNoIntervalo,
   montarRelatorioVisaoPessoa,
 } from '@/lib/relatorio/agregacoes'
-import { carregarContextoRelatorio } from '@/lib/relatorio/contexto-relatorio'
-import {
-  filtrosBaseVisaoPessoa,
-  montarPayloadDrillDown,
-} from '@/lib/relatorio/drill-down'
+import { carregarContextoRelatorioCached } from '@/lib/relatorio/contexto-relatorio-cache'
 import { subtituloVisaoPessoa, tituloPessoaPeriodo } from '@/lib/relatorio/formatadores'
 import { indicadoresPessoaParaUi } from '@/lib/relatorio/indicadores-ui'
 import { presetsPeriodoParaUi } from '@/lib/relatorio/presets-ui'
@@ -31,7 +25,7 @@ type PageProps = {
 
 export default async function RelatorioPessoaPage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorio(sp)
+  const ctx = await carregarContextoRelatorioCached(sp)
   const intervalo = ctx.periodo.intervalo
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,
@@ -50,16 +44,6 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
     ctx.movimentacoes,
     ctx.periodo,
     nomePessoa
-  )
-
-  const filtrosBase = filtrosBaseVisaoPessoa(intervalo, nomePessoa)
-  const drill = montarPayloadDrillDown(
-    ctx.demandas,
-    ctx.solicitacoes,
-    ctx.movimentacoes,
-    filtrosBase,
-    relatorio.paraQuem,
-    relatorio.tipoMaterial
   )
 
   const pessoasNav = nomesNoPeriodo.map((nome) => ({
@@ -97,13 +81,12 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
         <IndicadoresLinha itens={indicadoresPessoaParaUi(relatorio.indicadores)} />
       </div>
 
-      <Suspense fallback={null}>
-        <ListasContagemExpansivel
-          paraQuem={relatorio.paraQuem}
-          tipoMaterial={relatorio.tipoMaterial}
-          drill={drill}
-        />
-      </Suspense>
+      <ListasContagemExpansivel
+        chaveRelatorio={params.chave}
+        slugPessoa={params.slug}
+        paraQuem={relatorio.paraQuem}
+        tipoMaterial={relatorio.tipoMaterial}
+      />
     </Container>
   )
 }

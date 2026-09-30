@@ -1,5 +1,3 @@
-import { Suspense } from 'react'
-
 export const dynamic = 'force-dynamic'
 import { Container } from '@/components/ui/container'
 import { Texto } from '@/components/ui/texto'
@@ -9,12 +7,8 @@ import { GradeCardsPessoa } from '@/components/relatorio/grade-cards-pessoa'
 import { IndicadoresLinha } from '@/components/relatorio/indicadores-linha'
 import { BlocosVisaoTimeSection } from '@/components/relatorio/blocos-visao-time'
 import { ListasContagemExpansivel } from '@/components/relatorio/listas-contagem-expansivel'
-import { carregarContextoRelatorio } from '@/lib/relatorio/contexto-relatorio'
+import { carregarContextoRelatorioCached } from '@/lib/relatorio/contexto-relatorio-cache'
 import { montarRelatorioVisaoTime } from '@/lib/relatorio/agregacoes'
-import {
-  filtrosBaseVisaoTime,
-  montarPayloadDrillDown,
-} from '@/lib/relatorio/drill-down'
 import { notaDuplaContagemTime, tituloEntregasPeriodo } from '@/lib/relatorio/formatadores'
 import { indicadoresTimeParaUi } from '@/lib/relatorio/indicadores-ui'
 import { presetsPeriodoParaUi } from '@/lib/relatorio/presets-ui'
@@ -27,7 +21,7 @@ type PageProps = {
 
 export default async function RelatorioTimePage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorio(sp)
+  const ctx = await carregarContextoRelatorioCached(sp)
   const relatorio = montarRelatorioVisaoTime(
     ctx.demandas,
     ctx.solicitacoes,
@@ -35,16 +29,6 @@ export default async function RelatorioTimePage({ params, searchParams }: PagePr
     ctx.periodo
   )
   const intervalo = ctx.periodo.intervalo
-
-  const filtrosBase = filtrosBaseVisaoTime(intervalo)
-  const drill = montarPayloadDrillDown(
-    ctx.demandas,
-    ctx.solicitacoes,
-    ctx.movimentacoes,
-    filtrosBase,
-    relatorio.paraQuem,
-    relatorio.tipoMaterial
-  )
 
   return (
     <Container>
@@ -80,14 +64,12 @@ export default async function RelatorioTimePage({ params, searchParams }: PagePr
 
       <BlocosVisaoTimeSection blocos={relatorio.blocos} />
 
-      <Suspense fallback={null}>
-        <ListasContagemExpansivel
-          paraQuem={relatorio.paraQuem}
-          tipoMaterial={relatorio.tipoMaterial}
-          drill={drill}
-          mostrarParaQuem={relatorio.mostrarParaQuem}
-        />
-      </Suspense>
+      <ListasContagemExpansivel
+        chaveRelatorio={params.chave}
+        paraQuem={relatorio.paraQuem}
+        tipoMaterial={relatorio.tipoMaterial}
+        mostrarParaQuem={relatorio.mostrarParaQuem}
+      />
     </Container>
   )
 }

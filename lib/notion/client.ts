@@ -29,7 +29,7 @@ async function fetchAllFromNotion(client: Client, dataSourceId: string): Promise
 
   do {
     if (cursor) {
-      await new Promise((resolve) => setTimeout(resolve, 350))
+      await new Promise((resolve) => setTimeout(resolve, 200))
     }
 
     try {

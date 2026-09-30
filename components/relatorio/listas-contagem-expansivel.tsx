@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Fragment, useCallback } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { ItemContagem } from '@/lib/relatorio/agregacoes'
 import type { DemandaListagemItem } from '@/lib/relatorio/filtros-demandas'
 import {
   chaveAbertoDepartamento,
   chaveAbertoTipo,
   type DetalheDemandaInline,
-  type PayloadDrillDown,
 } from '@/lib/relatorio/drill-down'
 import {
   partesMetadadosDemandaListagem,
@@ -20,9 +19,10 @@ import { cn } from '@/lib/utils/cn'
 import { HistoricoDemanda } from './historico-demanda'
 
 type ListasContagemExpansivelProps = {
+  chaveRelatorio: string
+  slugPessoa?: string
   paraQuem: ItemContagem[]
   tipoMaterial: ItemContagem[]
-  drill: PayloadDrillDown
   mostrarParaQuem?: boolean
 }
 
@@ -67,6 +67,8 @@ function ListaCategoria({
   demandaAberta,
   listas,
   detalhes,
+  carregandoLista,
+  carregandoDemanda,
   onToggleCategoria,
   onToggleDemanda,
 }: {
@@ -77,6 +79,8 @@ function ListaCategoria({
   demandaAberta: string | null
   listas: Record<string, DemandaListagemItem[]>
   detalhes: Record<string, DetalheDemandaInline>
+  carregandoLista: string | null
+  carregandoDemanda: string | null
   onToggleCategoria: (chave: string) => void
   onToggleDemanda: (id: string) => void
 }) {
@@ -89,7 +93,8 @@ function ListaCategoria({
         {itens.map((item) => {
           const chave = chaveItem(item.nome)
           const categoriaAberta = abertoAtual === chave
-          const rows = listas[chave] ?? []
+          const rows = listas[chave]
+          const listaCarregando = carregandoLista === chave
 
           return (
             <li key={item.nome} className="border-b border-linha">
@@ -119,9 +124,13 @@ function ListaCategoria({
               {painelExpansivel(
                 categoriaAberta,
                 <ul className="border-t border-linha pl-24">
-                  {rows.map((row) => {
+                  {listaCarregando && rows === undefined && (
+                    <li className="py-16 text-14 text-marinho-fumo">Carregando…</li>
+                  )}
+                  {(rows ?? []).map((row) => {
                     const detalheAberto = demandaAberta === row.id
                     const detalhe = detalhes[row.id]
+                    const detalheCarregando = carregandoDemanda === row.id
 
                     return (
                       <li key={row.id} className="border-b border-linha last:border-b-0">
@@ -147,8 +156,11 @@ function ListaCategoria({
                         </button>
 
                         {painelExpansivel(
-                          detalheAberto && !!detalhe,
+                          detalheAberto,
                           <div className="border-t border-linha pl-24 pb-16 pt-12">
+                            {detalheCarregando && !detalhe && (
+                              <p className="text-14 text-marinho-fumo">Carregando histórico…</p>
+                            )}
                             {detalhe?.notionUrl && (
                               <Link
                                 href={detalhe.notionUrl}
@@ -159,10 +171,12 @@ function ListaCategoria({
                                 Abrir no Notion
                               </Link>
                             )}
-                            <HistoricoDemanda
-                              vazioAntiguidade={detalhe?.historicoVazioPorAntiguidade ?? false}
-                              itens={detalhe?.historico ?? []}
-                            />
+                            {detalhe && (
+                              <HistoricoDemanda
+                                vazioAntiguidade={detalhe.historicoVazioPorAntiguidade}
+                                itens={detalhe.historico}
+                              />
+                            )}
                           </div>
                         )}
                       </li>
@@ -178,10 +192,20 @@ function ListaCategoria({
   )
 }
 
+function paramsPeriodoDrill(searchParams: URLSearchParams): URLSearchParams {
+  const out = new URLSearchParams()
+  for (const key of ['de', 'ate', 'mes'] as const) {
+    const val = searchParams.get(key)
+    if (val) out.set(key, val)
+  }
+  return out
+}
+
 export function ListasContagemExpansivel({
+  chaveRelatorio,
+  slugPessoa,
   paraQuem,
   tipoMaterial,
-  drill,
   mostrarParaQuem = true,
 }: ListasContagemExpansivelProps) {
   const router = useRouter()
@@ -189,6 +213,24 @@ export function ListasContagemExpansivel({
   const searchParams = useSearchParams()
   const abertoAtual = searchParams.get('aberto')
   const demandaAberta = searchParams.get('demanda')
+
+  const [listasPorAberto, setListasPorAberto] = useState<
+    Record<string, DemandaListagemItem[]>
+  >({})
+  const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DetalheDemandaInline>>({})
+  const [carregandoLista, setCarregandoLista] = useState<string | null>(null)
+  const [carregandoDemanda, setCarregandoDemanda] = useState<string | null>(null)
+  const listasJaCarregadas = useRef(new Set<string>())
+  const detalhesJaCarregados = useRef(new Set<string>())
+
+  const chavePeriodo = `${searchParams.get('de') ?? ''}|${searchParams.get('ate') ?? ''}|${searchParams.get('mes') ?? ''}`
+
+  useEffect(() => {
+    setListasPorAberto({})
+    setDetalhesPorId({})
+    listasJaCarregadas.current.clear()
+    detalhesJaCarregados.current.clear()
+  }, [chavePeriodo])
 
   const pushParams = useCallback(
     (patch: Record<string, string | null>) => {
@@ -203,11 +245,66 @@ export function ListasContagemExpansivel({
     [pathname, router, searchParams]
   )
 
+  const carregarLista = useCallback(
+    async (chave: string) => {
+      if (listasJaCarregadas.current.has(chave)) return
+      listasJaCarregadas.current.add(chave)
+      setCarregandoLista(chave)
+      try {
+        const qs = paramsPeriodoDrill(searchParams)
+        qs.set('tipo', 'lista')
+        qs.set('aberto', chave)
+        if (slugPessoa) qs.set('pessoa', slugPessoa)
+        const res = await fetch(`/r/${chaveRelatorio}/drill?${qs.toString()}`)
+        if (!res.ok) return
+        const data = (await res.json()) as { rows?: DemandaListagemItem[] }
+        setListasPorAberto((prev) => ({ ...prev, [chave]: data.rows ?? [] }))
+      } finally {
+        setCarregandoLista((atual) => (atual === chave ? null : atual))
+      }
+    },
+    [chaveRelatorio, searchParams, slugPessoa]
+  )
+
+  const carregarDetalhe = useCallback(
+    async (demandaId: string) => {
+      if (detalhesJaCarregados.current.has(demandaId)) return
+      detalhesJaCarregados.current.add(demandaId)
+      setCarregandoDemanda(demandaId)
+      try {
+        const qs = paramsPeriodoDrill(searchParams)
+        qs.set('tipo', 'detalhe')
+        qs.set('demanda', demandaId)
+        if (slugPessoa) qs.set('pessoa', slugPessoa)
+        const res = await fetch(`/r/${chaveRelatorio}/drill?${qs.toString()}`)
+        if (!res.ok) return
+        const data = (await res.json()) as { detalhe?: DetalheDemandaInline }
+        if (data.detalhe) {
+          setDetalhesPorId((prev) => ({ ...prev, [demandaId]: data.detalhe! }))
+        }
+      } finally {
+        setCarregandoDemanda((atual) => (atual === demandaId ? null : atual))
+      }
+    },
+    [chaveRelatorio, searchParams, slugPessoa]
+  )
+
+  useEffect(() => {
+    if (!abertoAtual) return
+    void carregarLista(abertoAtual)
+  }, [abertoAtual, carregarLista])
+
+  useEffect(() => {
+    if (!demandaAberta) return
+    void carregarDetalhe(demandaAberta)
+  }, [demandaAberta, carregarDetalhe])
+
   const onToggleCategoria = (chave: string) => {
     if (abertoAtual === chave) {
       pushParams({ aberto: null, demanda: null })
     } else {
       pushParams({ aberto: chave, demanda: null })
+      void carregarLista(chave)
     }
   }
 
@@ -216,6 +313,7 @@ export function ListasContagemExpansivel({
       pushParams({ demanda: null })
     } else {
       pushParams({ demanda: id })
+      void carregarDetalhe(id)
     }
   }
 
@@ -235,8 +333,10 @@ export function ListasContagemExpansivel({
             chaveItem={chaveAbertoDepartamento}
             abertoAtual={abertoAtual}
             demandaAberta={demandaAberta}
-            listas={drill.listasPorAberto}
-            detalhes={drill.detalhesPorId}
+            listas={listasPorAberto}
+            detalhes={detalhesPorId}
+            carregandoLista={carregandoLista}
+            carregandoDemanda={carregandoDemanda}
             onToggleCategoria={onToggleCategoria}
             onToggleDemanda={onToggleDemanda}
           />
@@ -249,8 +349,10 @@ export function ListasContagemExpansivel({
           chaveItem={chaveAbertoTipo}
           abertoAtual={abertoAtual}
           demandaAberta={demandaAberta}
-          listas={drill.listasPorAberto}
-          detalhes={drill.detalhesPorId}
+          listas={listasPorAberto}
+          detalhes={detalhesPorId}
+          carregandoLista={carregandoLista}
+          carregandoDemanda={carregandoDemanda}
           onToggleCategoria={onToggleCategoria}
           onToggleDemanda={onToggleDemanda}
         />
