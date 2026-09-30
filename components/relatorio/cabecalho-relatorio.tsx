@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { BotaoAtualizar } from './botao-atualizar'
 import { BotaoPdf } from './botao-pdf'
 import { SeletorPeriodo, type OpcaoPresetUi } from './seletor-periodo'
 import { Texto } from '@/components/ui/texto'
@@ -37,6 +38,7 @@ export function CabecalhoRelatorio({
       </div>
       {mostrarControles && (
         <div className="flex flex-wrap items-center gap-12 no-print">
+          <BotaoAtualizar chave={chave} />
           <Suspense fallback={<Texto tamanho={14}>Carregando…</Texto>}>
             <SeletorPeriodo
               rotuloAtual={rotuloPeriodo}

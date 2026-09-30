@@ -52,6 +52,178 @@
   }
 }
 
+/* ---------- Loading: tubarão nadando ---------- */
+
+.tubarao-cena {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+}
+
+.tubarao-raio {
+  position: absolute;
+  top: -30%;
+  width: 90px;
+  height: 160%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 30%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: blur(8px);
+  transform: rotate(16deg);
+  animation: tubarao-raio 7s ease-in-out infinite;
+}
+
+.tubarao-particula {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(16, 32, 63, 0.16);
+  animation: tubarao-particula 9s linear infinite;
+}
+
+.tubarao-nado {
+  position: absolute;
+  top: 50%;
+  left: -300px;
+  margin-top: -49px;
+  animation: tubarao-nado 14s ease-in-out infinite;
+  will-change: left, transform;
+}
+
+.tubarao-corpo {
+  position: relative;
+  animation: tubarao-bob 4.2s ease-in-out infinite;
+}
+
+.tubarao-corpo svg {
+  display: block;
+}
+
+.tubarao-cauda {
+  transform-box: view-box;
+  transform-origin: 62px 45px;
+  animation: tubarao-cauda 1.1s ease-in-out infinite alternate;
+}
+
+.tubarao-peitoral {
+  transform-box: view-box;
+  transform-origin: 170px 64px;
+  animation: tubarao-peitoral 2.2s ease-in-out infinite alternate;
+}
+
+.tubarao-pontos span {
+  display: inline-block;
+  animation: tubarao-ponto 1.4s ease-in-out infinite;
+}
+
+.tubarao-pontos span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tubarao-pontos span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Vai para a direita, vira fora da tela e volta. */
+@keyframes tubarao-nado {
+  0% {
+    left: -300px;
+    transform: scaleX(1);
+  }
+  47% {
+    left: calc(100% + 40px);
+    transform: scaleX(1);
+  }
+  50% {
+    left: calc(100% + 40px);
+    transform: scaleX(-1);
+  }
+  97% {
+    left: -300px;
+    transform: scaleX(-1);
+  }
+  100% {
+    left: -300px;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tubarao-bob {
+  0%,
+  100% {
+    transform: translateY(-8px) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(8px) rotate(1.5deg);
+  }
+}
+
+@keyframes tubarao-cauda {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes tubarao-peitoral {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes tubarao-raio {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes tubarao-particula {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-40px, -70px);
+  }
+}
+
+@keyframes tubarao-atualizar-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tubarao-ponto {
+  0%,
+  60%,
+  100% {
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -59,6 +231,22 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .tubarao-nado {
+    animation: none !important;
+    left: 50% !important;
+    margin-left: -130px;
+  }
+
+  .tubarao-corpo,
+  .tubarao-cauda,
+  .tubarao-peitoral {
+    animation: none !important;
+  }
+
+  .tubarao-particula {
+    display: none;
   }
 }
 

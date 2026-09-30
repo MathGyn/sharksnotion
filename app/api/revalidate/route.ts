@@ -1,10 +1,6 @@
-import { revalidatePath, revalidateTag } from 'next/cache'
 import { revalidateSecretValido } from '@/lib/auth/revalidate-secret'
-import {
-  REVALIDATE_NOTION_SEGUNDOS,
-  TAG_CACHE_NOTION,
-  limparCacheNotionLiveMemoria,
-} from '@/lib/notion/fetch'
+import { REVALIDATE_NOTION_SEGUNDOS, TAG_CACHE_NOTION } from '@/lib/notion/fetch'
+import { revalidarCacheNotionRelatorio } from '@/lib/notion/revalidar-cache-relatorio'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,14 +9,9 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, erro: 'Não autorizado' }, { status: 401 })
   }
 
-  limparCacheNotionLiveMemoria()
-  revalidateTag(TAG_CACHE_NOTION)
-
   const chave = process.env.REPORT_ACCESS_KEY?.trim()
+  revalidarCacheNotionRelatorio(chave)
   const rotas = chave ? [`/r/${chave}`] : []
-  for (const rota of rotas) {
-    revalidatePath(rota, 'layout')
-  }
 
   return Response.json({
     ok: true,

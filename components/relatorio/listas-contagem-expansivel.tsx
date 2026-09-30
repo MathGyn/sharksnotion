@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { ItemContagem } from '@/lib/relatorio/agregacoes'
 import type { DemandaListagemItem } from '@/lib/relatorio/filtros-demandas'
 import {
@@ -201,7 +201,27 @@ function paramsPeriodoDrill(searchParams: URLSearchParams): URLSearchParams {
   return out
 }
 
-export function ListasContagemExpansivel({
+function EsqueletoListasContagem() {
+  return (
+    <div
+      className="grid grid-cols-12 gap-24"
+      aria-hidden
+    >
+      <div className="col-span-12 md:col-span-6 space-y-16">
+        <div className="h-24 w-[120px] animate-pulse rounded-interno bg-linha/40" />
+        <div className="h-40 animate-pulse rounded-interno bg-linha/25" />
+        <div className="h-40 animate-pulse rounded-interno bg-linha/25" />
+      </div>
+      <div className="col-span-12 md:col-span-6 space-y-16">
+        <div className="h-24 w-160 animate-pulse rounded-interno bg-linha/40" />
+        <div className="h-40 animate-pulse rounded-interno bg-linha/25" />
+        <div className="h-40 animate-pulse rounded-interno bg-linha/25" />
+      </div>
+    </div>
+  )
+}
+
+function ListasContagemExpansivelInner({
   chaveRelatorio,
   slugPessoa,
   paraQuem,
@@ -358,5 +378,14 @@ export function ListasContagemExpansivel({
         />
       </div>
     </div>
+  )
+}
+
+/** useSearchParams exige Suspense — evita erro de hidratação com loading.tsx e navegação. */
+export function ListasContagemExpansivel(props: ListasContagemExpansivelProps) {
+  return (
+    <Suspense fallback={<EsqueletoListasContagem />}>
+      <ListasContagemExpansivelInner {...props} />
+    </Suspense>
   )
 }
