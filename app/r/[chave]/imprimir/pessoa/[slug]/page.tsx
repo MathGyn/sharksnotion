@@ -28,7 +28,7 @@ type PageProps = {
 
 export default async function ImprimirPessoaPage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorio(sp)
+  const ctx = await carregarContextoRelatorio(params.chave, sp)
   const intervalo = ctx.periodo.intervalo
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,

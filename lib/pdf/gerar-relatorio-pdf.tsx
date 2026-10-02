@@ -46,10 +46,11 @@ function slugArquivo(base: string): string {
 }
 
 export async function gerarPdfRelatorioTime(
+  chave: string,
   searchParams: Record<string, string | undefined>
 ): Promise<{ buffer: Buffer; filename: string }> {
   prepararAmbientePdf()
-  const ctx = await carregarContextoRelatorio(searchParams)
+  const ctx = await carregarContextoRelatorio(chave, searchParams)
   const relatorio = montarRelatorioVisaoTime(
     ctx.demandas,
     ctx.solicitacoes,
@@ -83,11 +84,12 @@ export async function gerarPdfRelatorioTime(
 }
 
 export async function gerarPdfRelatorioPessoa(
+  chave: string,
   slug: string,
   searchParams: Record<string, string | undefined>
 ): Promise<{ buffer: Buffer; filename: string } | null> {
   prepararAmbientePdf()
-  const ctx = await carregarContextoRelatorio(searchParams)
+  const ctx = await carregarContextoRelatorio(chave, searchParams)
   const intervalo = ctx.periodo.intervalo
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,

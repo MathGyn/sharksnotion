@@ -38,7 +38,11 @@ export async function gerarPdfRelatorioMensal(
 
   const de = intervalo.de
   const ate = intervalo.ate
-  const ctx = await carregarContextoRelatorio({ de, ate })
+  const chave = process.env.REPORT_ACCESS_KEY?.trim()
+  if (!chave) {
+    throw new Error('REPORT_ACCESS_KEY não configurada')
+  }
+  const ctx = await carregarContextoRelatorio(chave, { de, ate })
   const periodo =
     ctx.periodo.intervalo.de === de && ctx.periodo.intervalo.ate === ate
       ? ctx.periodo

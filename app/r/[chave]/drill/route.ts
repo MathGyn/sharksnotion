@@ -30,7 +30,7 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   let ctx
   try {
-    ctx = await carregarContextoRelatorioCached(sp)
+    ctx = await carregarContextoRelatorioCached(params.chave, sp)
   } catch (error) {
     console.error('[drill] Falha ao carregar contexto:', error)
     const msg =

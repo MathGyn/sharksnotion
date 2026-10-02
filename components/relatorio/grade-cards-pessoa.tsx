@@ -26,6 +26,7 @@ export function GradeCardsPessoa({
           emAbertoAgora={card.emAbertoAgora}
           percentualNoPrazo={card.percentualNoPrazo}
           destaque={card.destaque}
+          semMovimentacaoNoPeriodo={card.semMovimentacaoNoPeriodo}
           pessoasReferencia={pessoasReferencia}
           fotoUrl={avatarsPorNome[card.nome] ?? null}
         />

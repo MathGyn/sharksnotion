@@ -41,6 +41,7 @@ export function CabecalhoRelatorio({
           <BotaoAtualizar chave={chave} />
           <Suspense fallback={<Texto tamanho={14}>Carregando…</Texto>}>
             <SeletorPeriodo
+              chaveRelatorio={chave}
               rotuloAtual={rotuloPeriodo}
               intervaloAtual={intervalo}
               presets={presets}

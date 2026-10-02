@@ -19,7 +19,7 @@ type PageProps = {
 
 export default async function ImprimirTimePage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorio(sp)
+  const ctx = await carregarContextoRelatorio(params.chave, sp)
   const relatorio = montarRelatorioVisaoTime(
     ctx.demandas,
     ctx.solicitacoes,
@@ -51,7 +51,7 @@ export default async function ImprimirTimePage({ params, searchParams }: PagePro
         <GradeCardsPessoa
           cards={relatorio.cardsPessoa}
           pessoasReferencia={ctx.pessoasReferencia}
-          hrefPorSlug={(slug) => hrefPessoa(params.chave, slug, intervalo)}
+          hrefPorSlug={(slug) => hrefPessoa(params.chave, slug)}
         />
       </section>
 

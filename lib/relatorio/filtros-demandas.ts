@@ -207,10 +207,7 @@ export function listarDemandasFiltradas(
 export function serializarFiltrosQuery(
   filtros: FiltrosDemandaResolvidos
 ): Record<string, string> {
-  const q: Record<string, string> = {
-    de: filtros.intervalo.de,
-    ate: filtros.intervalo.ate,
-  }
+  const q: Record<string, string> = {}
   if (filtros.pessoaNome) q.pessoa = nomeParaSlug(filtros.pessoaNome)
   if (filtros.departamento) q.departamento = departamentoParaSlug(filtros.departamento)
   if (filtros.tipoConteudo) q.tipo = tipoConteudoParaSlug(filtros.tipoConteudo)

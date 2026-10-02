@@ -52,6 +52,8 @@ export interface CardPessoaAgregado {
   emAbertoAgora: number
   percentualNoPrazo: ResultadoPercentualNoPrazo
   destaque: boolean
+  /** Sem passagens no período — card atenuado na visão geral, ainda clicável. */
+  semMovimentacaoNoPeriodo: boolean
 }
 
 export interface IndicadoresTime {
@@ -187,8 +189,9 @@ export function entregasPorPessoaNoIntervalo(
   movimentacoes: Movimentacao[],
   intervalo: Intervalo,
   demandas: Demanda[],
-  exclusoesDemanda: ExclusaoDemandaRelatorio[] = []
-): Omit<CardPessoaAgregado, 'destaque' | 'slug'>[] {
+  exclusoesDemanda: ExclusaoDemandaRelatorio[] = [],
+  opcoes?: { incluirSemPassagem?: boolean }
+): Omit<CardPessoaAgregado, 'destaque' | 'slug' | 'semMovimentacaoNoPeriodo'>[] {
   const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
 
   return pessoas
@@ -213,7 +216,7 @@ export function entregasPorPessoaNoIntervalo(
         ),
       }
     })
-    .filter((l) => l.passagens > 0)
+    .filter((l) => opcoes?.incluirSemPassagem || l.passagens > 0)
     .sort((a, b) => compararPessoaHierarquia(a.nome, b.nome))
 }
 
@@ -359,13 +362,15 @@ export function montarRelatorioVisaoTime(
     movimentacoes,
     intervalo,
     demandas,
-    exclusoesDemanda
+    exclusoesDemanda,
+    { incluirSemPassagem: true }
   )
   const cardsPessoa: CardPessoaAgregado[] = marcarDestaqueCardPrincipal(
     cardsRaw.map((l) => ({
       ...l,
       slug: nomeParaSlug(l.nome),
       destaque: false,
+      semMovimentacaoNoPeriodo: l.passagens === 0,
     }))
   )
 

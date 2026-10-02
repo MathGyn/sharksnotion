@@ -16,8 +16,6 @@ type ContadorEntregasProps = {
   /** Período com vários meses: soma somente leitura. */
   totalPeriodo: number
   ehMesAtual: boolean
-  /** Nulo quando não houve lançamento no mês anterior. */
-  valorMesAnterior: number | null
 }
 
 type EstadoSalvamento = 'ocioso' | 'pendente' | 'salvando' | 'salvo' | 'erro'
@@ -58,14 +56,6 @@ function BotaoPasso({
   )
 }
 
-function rotuloComparativo(atual: number, anterior: number | null): string {
-  if (anterior === null) return 'sem lançamento no mês anterior'
-  const diferenca = atual - anterior
-  if (diferenca === 0) return `igual ao mês anterior (${anterior})`
-  const sinal = diferenca > 0 ? '+' : '−'
-  return `${sinal}${Math.abs(diferenca)} vs. mês anterior (${anterior})`
-}
-
 /** Célula compacta dentro do resumo — salva sozinha no Notion (debounce + fila). */
 export function ContadorEntregas({
   chaveRelatorio,
@@ -76,7 +66,6 @@ export function ContadorEntregas({
   registroPageIdInicial,
   totalPeriodo,
   ehMesAtual,
-  valorMesAnterior,
 }: ContadorEntregasProps) {
   const [valor, setValor] = useState(valorInicial)
   const [rascunho, setRascunho] = useState<string | null>(null)
@@ -233,24 +222,24 @@ export function ContadorEntregas({
             </BotaoPasso>
           </div>
 
-          <p
-            role="status"
-            aria-live="polite"
-            className={cn(
-              'mt-auto pt-8 text-12 leading-texto',
-              estado === 'erro' ? 'text-atraso' : 'text-marinho-fumo'
-            )}
-          >
-            {estado === 'erro' ? (
-              <button type="button" onClick={() => void salvar()} className="underline">
-                Não salvou — tentar de novo
-              </button>
-            ) : salvando ? (
-              'Salvando…'
-            ) : (
-              rotuloComparativo(valor, valorMesAnterior)
-            )}
-          </p>
+          {(estado === 'erro' || salvando) && (
+            <p
+              role="status"
+              aria-live="polite"
+              className={cn(
+                'mt-auto pt-8 text-12 leading-texto',
+                estado === 'erro' ? 'text-atraso' : 'text-marinho-fumo'
+              )}
+            >
+              {estado === 'erro' ? (
+                <button type="button" onClick={() => void salvar()} className="underline">
+                  Não salvou — tentar de novo
+                </button>
+              ) : (
+                'Salvando…'
+              )}
+            </p>
+          )}
         </>
       ) : (
         <>

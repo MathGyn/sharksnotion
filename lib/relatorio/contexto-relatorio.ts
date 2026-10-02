@@ -4,6 +4,7 @@ import { derivarPessoasDosPara } from './classificacao'
 import type { ExclusaoDemandaRelatorio } from './exclusoes-demanda'
 import { listarExclusoesDemandaMockLocal } from './exclusoes-demanda-store'
 import { mergeExclusoesDemanda } from './merge-exclusoes'
+import { lerIntervaloPreferenciaCookie } from './periodo-cookie-server'
 import { resolverPeriodoConsulta, type PeriodoResolvido } from './periodo'
 import type { ContagemEntregasMensal, ObservacaoPessoaMensal } from './registros-pessoa'
 import { listarRegistrosPessoaMockLocal } from './registros-pessoa-store'
@@ -15,6 +16,7 @@ export function chaveRelatorioValida(chave: string): boolean {
 }
 
 export async function carregarContextoRelatorio(
+  _chave: string,
   searchParams: Record<string, string | undefined> = {}
 ): Promise<{
   demandas: Awaited<ReturnType<typeof fetchAllDataSources>>['demandas']
@@ -51,8 +53,7 @@ export async function carregarContextoRelatorio(
       ate: searchParams.ate,
       mes: searchParams.mes,
     },
-    demandas,
-    movimentacoes
+    { intervaloPreferencia: lerIntervaloPreferenciaCookie() }
   )
   const pessoasReferencia = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
   const avatarsPorNome = mapaAvatarPorNome(perfis, pessoasReferencia)

@@ -15,24 +15,20 @@ export function hrefRelatorio(
   return `/r/${chave}${caminho}${qs ? `?${qs}` : ''}`
 }
 
-export function hrefVisaoGeral(chave: string, intervalo: Intervalo): string {
-  return hrefRelatorio(chave, '', queryPeriodo(intervalo))
+export function hrefVisaoGeral(chave: string): string {
+  return hrefRelatorio(chave, '', {})
 }
 
-export function hrefPessoa(chave: string, slug: string, intervalo: Intervalo): string {
-  return hrefRelatorio(chave, `/pessoa/${slug}`, queryPeriodo(intervalo))
+export function hrefPessoa(chave: string, slug: string): string {
+  return hrefRelatorio(chave, `/pessoa/${slug}`, {})
 }
 
-export function hrefImprimirTime(chave: string, intervalo: Intervalo): string {
-  return hrefRelatorio(chave, '/imprimir', queryPeriodo(intervalo))
+export function hrefImprimirTime(chave: string): string {
+  return hrefRelatorio(chave, '/imprimir', {})
 }
 
-export function hrefImprimirPessoa(
-  chave: string,
-  slug: string,
-  intervalo: Intervalo
-): string {
-  return hrefRelatorio(chave, `/imprimir/pessoa/${slug}`, queryPeriodo(intervalo))
+export function hrefImprimirPessoa(chave: string, slug: string): string {
+  return hrefRelatorio(chave, `/imprimir/pessoa/${slug}`, {})
 }
 
 /** Download do PDF gerado no servidor (`?pessoa=` opcional). */

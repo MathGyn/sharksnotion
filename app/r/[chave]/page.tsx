@@ -21,7 +21,7 @@ type PageProps = {
 
 export default async function RelatorioTimePage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorioCached(sp)
+  const ctx = await carregarContextoRelatorioCached(params.chave, sp)
   const relatorio = montarRelatorioVisaoTime(
     ctx.demandas,
     ctx.solicitacoes,
@@ -59,7 +59,7 @@ export default async function RelatorioTimePage({ params, searchParams }: PagePr
           cards={relatorio.cardsPessoa}
           pessoasReferencia={ctx.pessoasReferencia}
           avatarsPorNome={ctx.avatarsPorNome}
-          hrefPorSlug={(slug) => hrefPessoa(params.chave, slug, intervalo)}
+          hrefPorSlug={(slug) => hrefPessoa(params.chave, slug)}
         />
       </section>
 
@@ -67,6 +67,7 @@ export default async function RelatorioTimePage({ params, searchParams }: PagePr
 
       <ListasContagemExpansivel
         chaveRelatorio={params.chave}
+        chavePeriodoResolvido={`${intervalo.de}|${intervalo.ate}`}
         paraQuem={relatorio.paraQuem}
         tipoMaterial={relatorio.tipoMaterial}
         mostrarParaQuem={relatorio.mostrarParaQuem}

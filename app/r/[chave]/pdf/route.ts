@@ -25,8 +25,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   try {
     const resultado = slugPessoa
-      ? await gerarPdfRelatorioPessoa(slugPessoa, searchParams)
-      : await gerarPdfRelatorioTime(searchParams)
+      ? await gerarPdfRelatorioPessoa(context.params.chave, slugPessoa, searchParams)
+      : await gerarPdfRelatorioTime(context.params.chave, searchParams)
 
     if (!resultado) {
       return new NextResponse('Pessoa não encontrada no período', { status: 404 })

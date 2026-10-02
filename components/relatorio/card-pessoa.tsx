@@ -13,6 +13,7 @@ type CardPessoaProps = {
   emAbertoAgora: number
   percentualNoPrazo: ResultadoPercentualNoPrazo
   destaque: boolean
+  semMovimentacaoNoPeriodo?: boolean
   pessoasReferencia: string[]
   fotoUrl?: string | null
 }
@@ -56,6 +57,7 @@ export function CardPessoa({
   emAbertoAgora,
   percentualNoPrazo,
   destaque,
+  semMovimentacaoNoPeriodo = false,
   pessoasReferencia,
   fotoUrl,
 }: CardPessoaProps) {
@@ -68,7 +70,13 @@ export function CardPessoa({
   const rotuloPercentual = temPercentual ? 'entregas no prazo' : 'sem prazo definido'
 
   return (
-    <Link href={href} className="group block h-full">
+    <Link
+      href={href}
+      className={cn(
+        'group block h-full transition-opacity duration-120 motion-reduce:transition-none',
+        semMovimentacaoNoPeriodo && 'opacity-45 hover:opacity-70'
+      )}
+    >
       <Bloco
         variant={destaque ? 'destaque' : 'padrao'}
         className={cn(

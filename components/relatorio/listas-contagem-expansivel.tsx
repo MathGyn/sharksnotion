@@ -21,6 +21,8 @@ import { HistoricoDemanda } from './historico-demanda'
 
 type ListasContagemExpansivelProps = {
   chaveRelatorio: string
+  /** Período efetivo no servidor (cookie ou padrão), para invalidar cache client-side. */
+  chavePeriodoResolvido: string
   slugPessoa?: string
   /** Nome canônico — necessário para excluir demanda só deste relatório pessoal. */
   nomePessoa?: string
@@ -347,6 +349,7 @@ function EsqueletoListasContagem() {
 
 function ListasContagemExpansivelInner({
   chaveRelatorio,
+  chavePeriodoResolvido,
   slugPessoa,
   nomePessoa,
   paraQuem,
@@ -373,14 +376,12 @@ function ListasContagemExpansivelInner({
   const detalhesJaCarregados = useRef(new Set<string>())
   const podeExcluirDemanda = Boolean(nomePessoa)
 
-  const chavePeriodo = `${searchParams.get('de') ?? ''}|${searchParams.get('ate') ?? ''}|${searchParams.get('mes') ?? ''}`
-
   useEffect(() => {
     setListasPorAberto({})
     setDetalhesPorId({})
     listasJaCarregadas.current.clear()
     detalhesJaCarregados.current.clear()
-  }, [chavePeriodo])
+  }, [chavePeriodoResolvido])
 
   const pushParams = useCallback(
     (patch: Record<string, string | null>) => {

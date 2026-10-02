@@ -3,11 +3,16 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { cn } from '@/lib/utils/cn'
+import {
+  gravarPreferenciaPeriodoCliente,
+  intervaloEquivaleEsteMes,
+} from '@/lib/relatorio/periodo-preferencia'
 import type { OpcaoPresetUi } from '@/lib/relatorio/presets-ui'
 
 export type { OpcaoPresetUi }
 
 type SeletorPeriodoProps = {
+  chaveRelatorio: string
   rotuloAtual: string
   intervaloAtual: { de: string; ate: string }
   presets: OpcaoPresetUi[]
@@ -15,6 +20,7 @@ type SeletorPeriodoProps = {
 }
 
 export function SeletorPeriodo({
+  chaveRelatorio,
   rotuloAtual,
   intervaloAtual,
   presets,
@@ -28,11 +34,19 @@ export function SeletorPeriodo({
   const [ateCustom, setAteCustom] = useState(intervaloAtual.ate)
 
   const navegarIntervalo = (de: string, ate: string) => {
+    const intervalo = { de, ate }
+    if (intervaloEquivaleEsteMes(intervalo)) {
+      gravarPreferenciaPeriodoCliente(chaveRelatorio, null)
+    } else {
+      gravarPreferenciaPeriodoCliente(chaveRelatorio, intervalo)
+    }
+
     const params = new URLSearchParams(searchParams.toString())
     params.delete('mes')
-    params.set('de', de)
-    params.set('ate', ate)
-    router.push(`${pathname}?${params.toString()}`)
+    params.delete('de')
+    params.delete('ate')
+    const qs = params.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname)
     setAberto(false)
   }
 

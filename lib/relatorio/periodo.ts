@@ -1,19 +1,12 @@
-import type { Demanda, Movimentacao } from '@/lib/notion/types'
 import type { DataISO } from '@/lib/notion/types'
 import {
   TIMEZONE,
   dataISOToDate,
   formatarDataISOBR,
-  getMesAnoAtualSP,
-  getMesAnoDeInstante,
   type Intervalo,
 } from '@/lib/utils/date'
 import { format, lastDayOfMonth, startOfMonth, subMonths } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
-import { derivarPessoasDosPara } from './classificacao'
-import { obterInstanteConclusao } from './conclusoes'
-import { calcularTodasPassagens } from './passagens'
-
 export type { DataISO, Intervalo }
 
 export type PresetPeriodo =
@@ -90,7 +83,7 @@ export function formatarRotuloPeriodo(intervalo: Intervalo): string {
   return `${formatarDataISOBR(intervalo.de)} a ${formatarDataISOBR(intervalo.ate)}`
 }
 
-function presetEsteMes(ref: Date): Intervalo {
+export function presetEsteMes(ref: Date): Intervalo {
   const z = referenciaSP(ref)
   const inicio = startOfMonth(z)
   const fim = lastDayOfMonth(z)
@@ -147,44 +140,32 @@ export function opcoesPresetPeriodo(referencia: Date = new Date()): {
   ]
 }
 
-function intervaloPadraoComDado(
-  demandas: Demanda[],
-  movimentacoes: Movimentacao[],
-  referencia: Date
-): Intervalo {
-  const meses = new Set<string>()
-  const pessoas = derivarPessoasDosPara(movimentacoes.map((m) => m.para))
-  const passagens = calcularTodasPassagens(movimentacoes, pessoas)
-
-  for (const d of demandas) {
-    const instante = obterInstanteConclusao(d, movimentacoes)
-    if (instante) meses.add(getMesAnoDeInstante(instante))
+export function inferirPresetPeriodo(
+  intervalo: Intervalo,
+  referencia: Date = new Date()
+): PresetPeriodo | null {
+  for (const opt of opcoesPresetPeriodo(referencia)) {
+    if (opt.intervalo.de === intervalo.de && opt.intervalo.ate === intervalo.ate) {
+      return opt.id
+    }
   }
-  for (const p of passagens) {
-    if (p.saida) meses.add(getMesAnoDeInstante(p.saida))
-  }
-
-  const atual = getMesAnoAtualSP()
-  const ordenados = [...meses].filter((m) => m <= atual).sort((a, b) => b.localeCompare(a))
-
-  if (ordenados.length > 0) {
-    return intervaloDeMesAno(ordenados[0])
-  }
-
-  return presetEsteMes(referencia)
+  return 'personalizado'
 }
 
 export function resolverPeriodoConsulta(
   params: { de?: string; ate?: string; mes?: string },
-  demandas: Demanda[],
-  movimentacoes: Movimentacao[],
-  referencia: Date = new Date()
+  opcoes?: {
+    intervaloPreferencia?: Intervalo | null
+    referencia?: Date
+  }
 ): PeriodoResolvido {
+  const referencia = opcoes?.referencia ?? new Date()
   let intervalo: Intervalo
   let preset: PresetPeriodo | null = null
 
   if (params.mes && /^\d{4}-\d{2}$/.test(params.mes)) {
     intervalo = intervaloDeMesAno(params.mes)
+    preset = inferirPresetPeriodo(intervalo, referencia)
   } else if (
     params.de &&
     params.ate &&
@@ -192,9 +173,12 @@ export function resolverPeriodoConsulta(
     /^\d{4}-\d{2}-\d{2}$/.test(params.ate)
   ) {
     intervalo = clampIntervaloSemFuturo({ de: params.de, ate: params.ate }, referencia)
-    preset = 'personalizado'
+    preset = inferirPresetPeriodo(intervalo, referencia)
+  } else if (opcoes?.intervaloPreferencia) {
+    intervalo = clampIntervaloSemFuturo(opcoes.intervaloPreferencia, referencia)
+    preset = inferirPresetPeriodo(intervalo, referencia)
   } else {
-    intervalo = intervaloPadraoComDado(demandas, movimentacoes, referencia)
+    intervalo = presetEsteMes(referencia)
     preset = 'este-mes'
   }
 

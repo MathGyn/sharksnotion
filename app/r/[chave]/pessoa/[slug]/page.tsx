@@ -21,11 +21,7 @@ import { contarEmAbertoComPessoa } from '@/lib/relatorio/em-aberto'
 import { subtituloVisaoPessoa } from '@/lib/relatorio/formatadores'
 import { rotuloMesAnoPorExtenso } from '@/lib/relatorio/periodo'
 import { presetsPeriodoParaUi } from '@/lib/relatorio/presets-ui'
-import {
-  contagemEntregasDoMes,
-  mesAnterior,
-  registrosPessoaNoPeriodo,
-} from '@/lib/relatorio/registros-pessoa'
+import { registrosPessoaNoPeriodo } from '@/lib/relatorio/registros-pessoa'
 import { mediaTempoPessoaNoIntervaloEmDias } from '@/lib/relatorio/tempo'
 import { getMesAnoAtualSP } from '@/lib/utils/date'
 import { nomeParaSlug, resolverPessoaPorSlug } from '@/lib/utils/slug'
@@ -38,7 +34,7 @@ type PageProps = {
 
 export default async function RelatorioPessoaPage({ params, searchParams }: PageProps) {
   const sp = normalizarSearchParams(searchParams)
-  const ctx = await carregarContextoRelatorioCached(sp)
+  const ctx = await carregarContextoRelatorioCached(params.chave, sp)
   const intervalo = ctx.periodo.intervalo
   const nomesNoPeriodo = entregasPorPessoaNoIntervalo(
     ctx.movimentacoes,
@@ -105,7 +101,6 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
 
       <NavegacaoPessoas
         chave={params.chave}
-        intervalo={intervalo}
         pessoaAtual={nomePessoa}
         pessoas={pessoasNav}
       />
@@ -137,12 +132,6 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
               registroPageIdInicial={registros.contagemMes?.registroPageId}
               totalPeriodo={registros.totalEntregas}
               ehMesAtual={mesRef === getMesAnoAtualSP()}
-              valorMesAnterior={
-                mesRef
-                  ? (contagemEntregasDoMes(ctx.contagensEntregas, nomePessoa, mesAnterior(mesRef))
-                      ?.quantidade ?? null)
-                  : null
-              }
             />
           }
         />
@@ -158,6 +147,7 @@ export default async function RelatorioPessoaPage({ params, searchParams }: Page
           </Texto>
           <ListasContagemExpansivel
             chaveRelatorio={params.chave}
+            chavePeriodoResolvido={`${intervalo.de}|${intervalo.ate}`}
             slugPessoa={params.slug}
             nomePessoa={nomePessoa}
             paraQuem={relatorio.paraQuem}

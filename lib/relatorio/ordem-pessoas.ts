@@ -30,13 +30,16 @@ export function ordenarNomesHierarquia(nomes: string[]): string[] {
 }
 
 /** Único card em areia: Guilherme quando está na grade; senão o primeiro da hierarquia. */
-export function marcarDestaqueCardPrincipal<T extends { nome: string }>(
+export function marcarDestaqueCardPrincipal<T extends { nome: string; passagens?: number }>(
   cards: T[]
 ): (T & { destaque: boolean })[] {
   if (cards.length === 0) return []
 
-  const guilherme = cards.find((c) => chaveNome(c.nome) === chaveNome('Guilherme'))
-  const nomeDestaque = guilherme?.nome ?? cards[0].nome
+  const comPassagem = cards.filter((c) => (c.passagens ?? 0) > 0)
+  const pool = comPassagem.length > 0 ? comPassagem : cards
+
+  const guilherme = pool.find((c) => chaveNome(c.nome) === chaveNome('Guilherme'))
+  const nomeDestaque = guilherme?.nome ?? pool[0].nome
 
   return cards.map((c) => ({
     ...c,
